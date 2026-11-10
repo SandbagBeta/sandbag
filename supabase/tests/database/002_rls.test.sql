@@ -121,6 +121,7 @@ reset role;
 
 -- Takedown: unpublishing a scan hides everything annotated on it ------------
 update public.scans set status = 'rejected' where id = '20000000-0000-0000-0000-000000000001';
+select set_config('request.jwt.claims', '', true); -- anon requests carry no user
 set local role anon;
 select is((select count(*)::int from public.climbs), 0, 'takedown hides the scan''s climbs');
 select is((select count(*)::int from public.holds), 0, 'takedown hides the scan''s holds');
