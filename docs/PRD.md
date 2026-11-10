@@ -175,7 +175,7 @@ Row-level security: contributors edit their own pending items; published items i
 ## 9. QC pipeline (the "good enough" check)
 
 **Automated (Edge Function, on upload):**
-1. File: extension/magic-bytes match, size ≤ 200 MB raw.
+1. File: extension/magic-bytes match, size ≤ 200 MB raw (self-host and paid plans; hosted Supabase Free caps uploads at 50 MB, which is the hosted limit during development, per [ADR 002](decisions/002-mesh-storage.md) D2).
 2. Parse: mesh loads, ≥ 1 mesh primitive, triangle count in [10k, 5M].
 3. Geometry: bounding box sane (0.3m–30m — it's a boulder, not a pebble or a mountain), not degenerate (volume > 0), < 50% disconnected floater vertices.
 4. Texture: present, ≥ 1024px on longest side (warn, don't fail, below 2048).
@@ -210,7 +210,7 @@ Row-level security: contributors edit their own pending items; published items i
 |---|---|---|
 | Scan quality from phone apps is inconsistent | Junk in viewer | Hard QC gates + review queue; capture guide doc with per-app tips |
 | OpenBeta API changes/downtime | Browse breaks | Cache snapshots in Postgres; degrade to cached data |
-| Mesh files blow free-tier storage (Supabase 1GB free) | Cost | Aggressive Draco compression (~5–20MB/boulder); migrate raw files to Cloudflare R2 (10GB free) when needed — flagged as M2 issue |
+| Mesh egress and file-size limits blow the free tier (Supabase Free: 1GB storage, 5+5GB egress, 50MB/file) | Cost | Aggressive compression; storage adapter with optional Cloudflare R2 driver (zero egress) for published meshes at a traffic threshold. See [ADR 002](decisions/002-mesh-storage.md) |
 | Access backlash from climbing community | Project reputation | Values §2 enforced in code (location_privacy); engage orgs early |
 | Annotation UX is hard (3D picking on mobile) | Contribution funnel dies | Desktop-first annotation; viewer works everywhere; usability issue in M3 |
 | Solo maintainer burnout mid-semester | Stall | Agent-parallel workflow (PLAN.md); small issues; ruthless v1 scope |

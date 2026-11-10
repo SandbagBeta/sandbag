@@ -27,13 +27,16 @@ Prereqs: Node 24+, pnpm, [Supabase CLI](https://supabase.com/docs/guides/cli), D
 ```bash
 git clone https://github.com/sandbagbeta/sandbag && cd sandbag
 pnpm install
-cp .env.example .env.local   # fill in values printed by `supabase start`
-supabase start               # local Postgres/Auth/Storage stack
-pnpm seed                    # demo scan + fixture climbs
+supabase start               # local Postgres/Auth/Storage stack (needs Docker)
+cp .env.example .env.local   # then paste the keys printed by `supabase start`
+                             # (`supabase status` reprints them any time)
+pnpm seed                    # demo GLB only (climbs come with #3)
 pnpm dev                     # http://localhost:3000
 ```
 
-*(`supabase start` and `pnpm seed` come online with issues #2 and #8; the app scaffold, lint/typecheck/test/build already work.)*
+Check the wiring at <http://localhost:3000/api/health> — it reports `"supabase": "configured"` once `.env.local` is filled in. `supabase/config.toml` declares two storage buckets: `uploads` (private, raw contributor scans) and `published` (public, QC-approved GLBs); `supabase start` creates both.
+
+`pnpm seed` validates the committed demo fixture (`public/fixtures/demo-boulder.glb` + `src/lib/fixtures/demo-boulder.json`, see [public/fixtures/README.md](public/fixtures/README.md)) and, when `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set in `.env.local`, uploads the GLB to the `published` storage bucket. **Only the demo GLB is uploaded — no climbs, holds or paths are seeded until schema v1 (issue #3) lands.** Without the env vars it just reports and exits 0, so the quickstart works with no Supabase stack. As a guard against pointing a service-role key at production, the upload only runs against `localhost`/`127.0.0.1` unless you pass `pnpm seed --force`. The service-role key is for scripts only — never expose it under a `NEXT_PUBLIC_` name.
 
 ## Stack
 
