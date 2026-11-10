@@ -33,7 +33,7 @@ pnpm seed                    # demo scan + fixture climbs
 pnpm dev                     # http://localhost:3000
 ```
 
-*(These commands come online during milestone M0 — until then this is the contract the scaffold must meet.)*
+*(`supabase start` and `pnpm seed` come online with issues #2 and #8; the app scaffold, lint/typecheck/test/build already work.)*
 
 ## Stack
 

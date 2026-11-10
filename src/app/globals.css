@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+@theme {
+  --color-sandstone: #c9a27e;
+  --color-granite: #3b3f46;
+}
+
+:root {
+  color-scheme: light dark;
+}
+
+body {
+  @apply bg-stone-50 text-stone-900 antialiased dark:bg-stone-950 dark:text-stone-100;
+}
