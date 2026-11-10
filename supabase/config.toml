@@ -151,6 +151,19 @@ allowed_mime_types = [
   "image/webp",
 ]
 
+# Raw originals of published scans: private forever, server-only (ADR 002 §3, §5).
+# Kept apart from `uploads` so upload cleanup can never touch published data.
+[storage.buckets.originals]
+public = false
+file_size_limit = "200MiB"
+allowed_mime_types = [
+  "model/gltf-binary",
+  "model/gltf+json",
+  "model/obj",
+  "application/zip",
+  "application/octet-stream",
+]
+
 # Allow connections via S3 compatible clients
 [storage.s3_protocol]
 enabled = true
