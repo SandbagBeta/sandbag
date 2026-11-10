@@ -170,7 +170,7 @@ area_privacy     openbeta_area_id, location_privacy: exact|fuzzed_1km|hidden,
                  reason, set_by, set_at   (SandBag-owned; never overwritten by refresh)
 ```
 
-Row-level security: contributors edit their own pending items; published items immutable except through review; grade votes are per-user. RLS is row-level, so raw coordinates are protected by keeping them in separate tables with no public SELECT policy (or revoked column privileges), never by row policies alone; they are read only server-side through the location-privacy formatter. Cache shape, TTL and privacy rules: [ADR 001](decisions/001-openbeta-api.md). `subject_type: area` is how a reviewer clears `ancestors_changed_at` (ADR 001 P3). Implemented in `supabase/migrations/20261110000000_schema_v1.sql`.
+Row-level security: contributors edit their own pending items; published items immutable except through review; grade votes are per-user. RLS is row-level, so raw coordinates are protected by keeping them in separate tables with no public SELECT policy (or revoked column privileges), never by row policies alone; they are read only server-side through the location-privacy formatter. Cache shape, TTL and privacy rules: [ADR 001](decisions/001-openbeta-api.md). Deleting an account anonymizes its scans, climbs and reviews (author set to null) and deletes its grade votes; the CC BY-SA data stays. `subject_type: area` is how a reviewer clears `ancestors_changed_at` (ADR 001 P3). Implemented in `supabase/migrations/20261110000000_schema_v1.sql`.
 
 ## 9. QC pipeline (the "good enough" check)
 

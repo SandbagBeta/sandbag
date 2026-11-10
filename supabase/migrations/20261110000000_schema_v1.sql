@@ -13,6 +13,8 @@
 -- * location_privacy is SandBag-owned (area_privacy) and is never written by
 --   a cache refresh.
 -- * Status columns change only through the lifecycle module (PRD §8, #20).
+-- * Deleting an account anonymizes its scans, climbs and reviews (author set
+--   to null) and deletes its grade votes; the contributed data stays public.
 
 -- Enums ------------------------------------------------------------------
 
@@ -105,7 +107,9 @@ create table public.area_privacy (
 
 create table public.scans (
   id                uuid primary key default gen_random_uuid(),
-  uploader_id       uuid not null references public.profiles (id),
+  -- Account deletion anonymizes instead of deleting CC BY-SA contributions
+  -- (maintainer decision on #54): the author becomes null, the data stays.
+  uploader_id       uuid references public.profiles (id) on delete set null,
   openbeta_area_id  uuid references public.area_cache (openbeta_area_id),
   openbeta_climb_id uuid references public.climb_cache (openbeta_climb_id),
   status            public.lifecycle_status not null default 'uploaded',
@@ -139,7 +143,7 @@ create table public.climbs (
   fa_info        text,
   -- Climbs skip upload/QC, so they enter the lifecycle at pending_review.
   status         public.lifecycle_status not null default 'pending_review',
-  created_by     uuid not null references public.profiles (id),
+  created_by     uuid references public.profiles (id) on delete set null,
   created_at     timestamptz not null default now()
 );
 create index climbs_scan_idx on public.climbs (scan_id);
@@ -183,7 +187,7 @@ create table public.reviews (
   -- scans.id, climbs.id, or area_cache.openbeta_area_id (polymorphic, no FK).
   -- Existence is checked by the lifecycle module that writes reviews (#20).
   subject_id   uuid not null,
-  reviewer_id  uuid not null references public.profiles (id),
+  reviewer_id  uuid references public.profiles (id) on delete set null,
   verdict      public.review_verdict not null,
   reason       text,
   created_at   timestamptz not null default now(),

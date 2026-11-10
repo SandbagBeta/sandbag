@@ -3,7 +3,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(37);
+select plan(39);
 
 select has_table('public', t, 'table ' || t || ' exists')
 from unnest(array[
@@ -82,6 +82,15 @@ select throws_ok(
   $$insert into public.holds (climb_id, scan_content_hash, position, normal, face_index, type)
     values ('00000000-0000-0000-0000-0000000000c1', repeat('a', 64), '{0,1}', '{0,0,1}', 0, 'start')$$,
   '23514', null, 'hold position must be a vec3');
+
+-- Account deletion anonymizes contributions instead of failing or erasing them.
+delete from auth.users where id = '00000000-0000-0000-0000-0000000000a1';
+select is(
+  (select uploader_id from public.scans where id = '00000000-0000-0000-0000-0000000000b1'),
+  null, 'a deleted account leaves its scan with no uploader');
+select is(
+  (select created_by from public.climbs where id = '00000000-0000-0000-0000-0000000000c1'),
+  null, 'a deleted account leaves its climb with no author');
 
 select * from finish();
 rollback;
