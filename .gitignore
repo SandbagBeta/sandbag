@@ -22,3 +22,10 @@ supabase/.branches/
 
 # large local mesh scratch (fixtures are committed deliberately)
 scratch/
+
+# generated
+next-env.d.ts
+*.tsbuildinfo
+
+# Claude Code agent worktrees (isolated checkouts, never commit)
+.claude/worktrees/
