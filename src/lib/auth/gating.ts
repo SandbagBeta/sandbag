@@ -1,12 +1,12 @@
 /**
  * Routes that require a signed-in user. Each entry gates the path itself and
  * everything below it ("/account" gates "/account/settings", not "/accounts").
- * Extend this list when adding gated pages (#15 "/upload", #19 "/review").
+ * Extend this list when adding gated pages (#19 "/review").
  *
  * The proxy redirect is a UX convenience, not the security boundary: gated
  * pages must still check the user server-side, and RLS guards the data.
  */
-export const GATED_PATH_PREFIXES: readonly string[] = ["/account"];
+export const GATED_PATH_PREFIXES: readonly string[] = ["/account", "/upload"];
 
 export const SIGN_IN_PATH = "/sign-in";
 
