@@ -33,7 +33,9 @@ pnpm seed                    # demo scan + fixture climbs
 pnpm dev                     # http://localhost:3000
 ```
 
-*(`supabase start` and `pnpm seed` come online with issues #2 and #8; the app scaffold, lint/typecheck/test/build already work.)*
+*(`supabase start` comes online with issue #2; the app scaffold, lint/typecheck/test/build already work.)*
+
+`pnpm seed` validates the committed demo fixture (`public/fixtures/demo-boulder.glb` + `src/lib/fixtures/demo-boulder.json`, see [public/fixtures/README.md](public/fixtures/README.md)) and, when `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set in `.env.local`, uploads the GLB to the `published` storage bucket. Without them it just reports and exits 0, so the quickstart works with no Supabase stack. The service-role key is for scripts only — never expose it under a `NEXT_PUBLIC_` name.
 
 ## Stack
 
