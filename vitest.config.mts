@@ -1,5 +1,6 @@
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
+import { fileURLToPath } from "node:url";
 
 export default defineConfig({
   plugins: [react()],
@@ -10,6 +11,8 @@ export default defineConfig({
     include: ["src/**/*.test.{ts,tsx}", "eslint-rules/**/*.test.mjs"],
   },
   resolve: {
-    alias: { "@": new URL("./src", import.meta.url).pathname },
+    // fileURLToPath, not URL.pathname: the latter keeps %20 and a leading
+    // slash before the drive letter on Windows.
+    alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
   },
 });
