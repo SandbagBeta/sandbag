@@ -149,6 +149,8 @@ create index climbs_status_idx on public.climbs (status);
 create table public.holds (
   id                uuid primary key default gen_random_uuid(),
   climb_id          uuid not null references public.climbs (id) on delete cascade,
+  -- Must equal the climb's scans.content_hash when written; re-processed
+  -- meshes invalidate holds by hash mismatch (PRD §7). Enforced by #26.
   scan_content_hash text not null check (scan_content_hash ~ '^[0-9a-f]{64}$'),
   position          double precision[] not null check (cardinality(position) = 3),
   normal            double precision[] not null check (cardinality(normal) = 3),
@@ -179,6 +181,7 @@ create table public.reviews (
   id           uuid primary key default gen_random_uuid(),
   subject_type public.review_subject not null,
   -- scans.id, climbs.id, or area_cache.openbeta_area_id (polymorphic, no FK).
+  -- Existence is checked by the lifecycle module that writes reviews (#20).
   subject_id   uuid not null,
   reviewer_id  uuid not null references public.profiles (id),
   verdict      public.review_verdict not null,

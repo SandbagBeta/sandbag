@@ -3,7 +3,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(20);
+select plan(37);
 
 select has_table('public', t, 'table ' || t || ' exists')
 from unnest(array[
@@ -27,7 +27,7 @@ select ok(
 )
 from unnest(array['anon', 'authenticated']) as r,
      unnest(array['area_cache_coords', 'climb_cache_coords']) as t,
-     unnest(array['select']) as p;
+     unnest(array['select', 'insert', 'update', 'delete']) as p;
 
 -- Coordinates exist nowhere else in the public schema.
 select is(
@@ -55,6 +55,33 @@ select throws_ok(
   null,
   'a published scan without glb_path/content_hash is rejected'
 );
+
+-- Value constraints.
+select throws_ok(
+  $$insert into public.scans (uploader_id, license)
+    values ('00000000-0000-0000-0000-0000000000a1', 'CC0-1.0')$$,
+  '23514', null, 'only CC BY-SA 4.0 scans are accepted');
+select throws_ok(
+  $$insert into public.scans (uploader_id, content_hash)
+    values ('00000000-0000-0000-0000-0000000000a1', 'not-a-sha256')$$,
+  '23514', null, 'content_hash must be a hex sha256');
+select throws_ok(
+  $$insert into public.area_privacy (openbeta_area_id, location_privacy, reason)
+    values (gen_random_uuid(), 'hidden', '   ')$$,
+  '23514', null, 'a privacy flag needs a reason');
+select throws_ok(
+  $$insert into public.reviews (subject_type, subject_id, reviewer_id, verdict, reason)
+    values ('scan', gen_random_uuid(), '00000000-0000-0000-0000-0000000000a1', 'reject', '  ')$$,
+  '23514', null, 'a rejection needs a reason');
+insert into public.scans (id, uploader_id)
+values ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000a1');
+insert into public.climbs (id, scan_id, name, proposed_grade, created_by)
+values ('00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-0000000000b1',
+        'Test', 'V0', '00000000-0000-0000-0000-0000000000a1');
+select throws_ok(
+  $$insert into public.holds (climb_id, scan_content_hash, position, normal, face_index, type)
+    values ('00000000-0000-0000-0000-0000000000c1', repeat('a', 64), '{0,1}', '{0,0,1}', 0, 'start')$$,
+  '23514', null, 'hold position must be a vec3');
 
 select * from finish();
 rollback;
