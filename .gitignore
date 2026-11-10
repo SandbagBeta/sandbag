@@ -26,3 +26,6 @@ scratch/
 # generated
 next-env.d.ts
 *.tsbuildinfo
+
+# Claude Code agent worktrees (isolated checkouts, never commit)
+.claude/worktrees/
