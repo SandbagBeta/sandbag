@@ -10,6 +10,13 @@ describe("Home page", () => {
     expect(screen.getAllByRole("listitem")).toHaveLength(5);
   });
 
+  it("links to sign-in / account", () => {
+    render(<Home />);
+    expect(
+      screen.getByRole("link", { name: /sign in \/ account/i }),
+    ).toHaveAttribute("href", "/account");
+  });
+
   it("links to the OpenBeta project it builds on", () => {
     render(<Home />);
     expect(screen.getByRole("link", { name: /openbeta/i })).toHaveAttribute(
