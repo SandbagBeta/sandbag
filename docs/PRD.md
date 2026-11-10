@@ -19,7 +19,7 @@ The long game: every annotated hold on every scan is labeled training data. Once
 These are commitments, not aspirations. PRs and decisions that conflict with them get rejected.
 
 1. **Open by default.** Code is AGPL-3.0 — improvements must flow back. Contributed scans and annotations are CC BY-SA 4.0 — the dataset can never be enclosed. Anyone can export/download the data.
-2. **Respect access.** Climbing access is fragile. We inherit OpenBeta's area data and access warnings, let contributors flag sensitive areas, and support hiding or fuzzing precise coordinates where local climbing organizations request it. We never force publication of exact GPS for a flagged area.
+2. **Respect access.** Climbing access is fragile. We inherit OpenBeta's area data (OpenBeta has no structured access-warning fields, so we show its local climbing organizations and keep our own privacy flags), let contributors flag sensitive areas, and support hiding or fuzzing precise coordinates where local climbing organizations request it. We never force publication of exact GPS for a flagged area.
 3. **Community over moderators.** Quality control is automated checks plus community review — no single-gatekeeper bottleneck. Trust is earned and distributed.
 4. **Don't duplicate open data.** Boulder/area/route metadata lives in OpenBeta. We store only what's new: the 3D layer (scans, holds, annotations, grade votes) linked to OpenBeta IDs.
 5. **Contributor-friendly.** A new contributor should go from clone to running app in under 10 minutes, with free-tier services only.
@@ -60,7 +60,7 @@ Honest gaps vs Kaya: they have beta videos, offline GPS guidebooks, gym partners
 3. **Community review** — review queue; approvals promote scan to `published`. Early on, maintainers review; trust levels later.
 4. **3D viewer** — Three.js (react-three-fiber): orbit/pan/zoom, hold highlighting, climb selection, start/topout/downclimb markers, mobile-friendly.
 5. **Annotation tool** — click on the mesh to place holds (type: start / hand / foot / finish), draw the line (ordered hold sequence), mark topout + downclimb path, attach name/description/FA info.
-6. **OpenBeta integration** — search OpenBeta's GraphQL API to attach a scan to an existing area/boulder/problem; store OpenBeta UUIDs; display their metadata and access warnings; respect flagged/sensitive areas (no precise coords shown).
+6. **OpenBeta integration** — search OpenBeta's GraphQL API to attach a scan to an existing area/boulder/problem; store OpenBeta UUIDs; display their metadata and local climbing organizations; respect flagged/sensitive areas (no precise coords shown; privacy flags are SandBag-owned, see [ADR 001](decisions/001-openbeta-api.md)).
 7. **Community grades** — logged-in users vote a V-grade per climb; show distribution, consensus, and the delicious "sandbagged" delta when community grade > guidebook grade.
 8. **Browse & download** — area/boulder index, search, and per-boulder open-data export (GLB + annotations JSON, CC BY-SA).
 9. **Auth & profiles** — Supabase auth (GitHub/Google OAuth), minimal profile, contribution history.
@@ -103,7 +103,7 @@ open published scan → "Add climb" → click holds on mesh (raycast → store p
 
 ### 6.3 Browse & view
 ```
-landing → map/area list (OpenBeta data; sensitive areas fuzzed) → boulder page
+landing → map/area list (OpenBeta data; flagged areas fuzzed/hidden) → boulder page
 → 3D viewer with climb list → select climb → holds glow, line draws, info panel
 → grade votes → "Download data" (GLB + JSON, CC BY-SA)
 ```
@@ -121,7 +121,7 @@ landing → map/area list (OpenBeta data; sensitive areas fuzzed) → boulder pa
 ┌──────────▼──────────────┐   ┌──────────▼──────────────────────────┐
 │ Supabase                │   │ OpenBeta GraphQL API                │
 │ ├─ Postgres (+ RLS)     │   │ (api.openbeta.io) — areas, boulders,│
-│ ├─ Auth (OAuth)         │   │ climbs, access warnings. Read-only. │
+│ ├─ Auth (OAuth)         │   │ climbs, local climbing orgs. R/O.   │
 │ ├─ Storage (raw +       │   │ Cached in Postgres w/ TTL.          │
 │ │   processed meshes)   │   └─────────────────────────────────────┘
 │ └─ Edge Functions:      │
@@ -137,9 +137,9 @@ landing → map/area list (OpenBeta data; sensitive areas fuzzed) → boulder pa
 | Accepted uploads | .glb/.gltf, .obj(+.mtl/textures zipped), .ply | Covers Polycam, Scaniverse, RealityScan, Luma export menus |
 | Mesh processing | Edge Function (or small worker) using `gltf-transform`; `assimp`/`obj2gltf` for conversion | Pure-JS pipeline where possible; keeps self-hosting easy |
 | Hold anchoring | Position (xyz) + face index + normal on the *canonical* GLB; annotations versioned against a scan content-hash | Survives recompression; invalidates cleanly if mesh is replaced |
-| OpenBeta coupling | Store `openbeta_area_id` / `openbeta_climb_id` UUIDs + cached snapshot (name, grade, access flags) | Their data stays theirs; we degrade gracefully if API is down |
+| OpenBeta coupling | Store `openbeta_area_id` / `openbeta_climb_id` UUIDs + cached snapshot of facts only (name, path, grade, organizations; no prose/photos) | Their data stays theirs; we degrade gracefully if API is down. See [ADR 001](decisions/001-openbeta-api.md) |
 | Grades | V-scale votes, one per user per climb, show distribution not just mean | Matches boulder culture; resists brigading better than ratings |
-| Access safety | `location_privacy` enum on area cache: `exact / fuzzed_1km / hidden`, set from OpenBeta flags + local-org requests | Values §2 |
+| Access safety | `location_privacy` enum `exact / fuzzed_1km / hidden` in a SandBag-owned `area_privacy` table (OpenBeta has no such flags), set from local-org requests + maintainer/reviewer flags, inherited down the area tree (most restrictive wins). Default `exact` only when the lookup succeeds and no ancestor is flagged; any error, uncached area, missing/stale or re-parented ancestors → `hidden` (fail closed). `fuzzed_1km` is a deterministic per-area offset. Names are public; coordinates live in locked-down tables. See [ADR 001](decisions/001-openbeta-api.md) | Values §2 |
 | Self-hosting | `supabase start` (local stack) + `vercel dev`; seed script with 2 demo scans | Values §5 |
 
 ## 8. Data model (v1)
@@ -158,11 +158,19 @@ paths            id, climb_id, kind: line|topout|downclimb, points jsonb
 grade_votes      climb_id, user_id, grade, created_at  (unique per user+climb)
 reviews          id, subject_type: scan|climb, subject_id, reviewer_id,
                  verdict: approve|request_changes|reject, reason, created_at
-area_cache       openbeta_area_id, name, path, access_warnings jsonb,
-                 location_privacy, coords?, fetched_at
+area_cache       openbeta_area_id, name, path_tokens, ancestors uuid[], is_leaf,
+                 total_climbs, organizations jsonb, openbeta_updated_at,
+                 fetched_at, refresh_after, last_error?, ancestors_changed_at?
+                 (public: names/paths of hidden areas are not secret)
+area_cache_coords  openbeta_area_id, lat, lng, bbox   (no anon/authenticated SELECT)
+climb_cache      openbeta_climb_id, openbeta_area_id, name, grades jsonb,
+                 is_boulder, fetched_at, refresh_after
+climb_cache_coords openbeta_climb_id, lat, lng       (no anon/authenticated SELECT)
+area_privacy     openbeta_area_id, location_privacy: exact|fuzzed_1km|hidden,
+                 reason, set_by, set_at   (SandBag-owned; never overwritten by refresh)
 ```
 
-Row-level security: contributors edit their own pending items; published items immutable except through review; grade votes are per-user.
+Row-level security: contributors edit their own pending items; published items immutable except through review; grade votes are per-user. RLS is row-level, so raw coordinates are protected by keeping them in separate tables with no public SELECT policy (or revoked column privileges), never by row policies alone; they are read only server-side through the location-privacy formatter. Cache shape, TTL and privacy rules: [ADR 001](decisions/001-openbeta-api.md).
 
 ## 9. QC pipeline (the "good enough" check)
 

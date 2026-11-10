@@ -1,6 +1,6 @@
 # 001 — OpenBeta API: terms, rate limits, queries, cache design
 
-- **Status:** Proposed (research spike for #27; implementation is still open)
+- **Status:** Accepted. This was the research spike for #27; the implementation is still open. The privacy decisions D1 and D2 were made by the maintainer.
 - **Date:** 2026-11-09
 - **Lane:** backend
 - **Refs:** #27 (OpenBeta client + cache), #3 (schema v1). PRD §2, §5.6, §7, §8, §12
@@ -10,7 +10,13 @@
 Each claim is tagged with how it was checked:
 
 - **[V]** checked against a public source, which is linked.
-- **[L]** checked against the live production API (`https://api.openbeta.io`) on 2026-11-09. Four read-only requests were made in total.
+- **[L]** checked against the live production API (`https://api.openbeta.io`) on 2026-11-09. I sent exactly four read-only GraphQL POST requests:
+  - `SearchAreas` for "Pawtuckaway";
+  - `SearchAreas` for "Hammond Pond";
+  - `AreaDetail` for Hammond Pond, including its children's climbs;
+  - `AreaChildren` for Pawtuckaway.
+
+  Every response-header and latency observation below comes from those four responses. Separately, I sent three GET requests to the website `openbeta.io` (`/terms`, `/tos`, `/privacy`) to look for terms of service. Those went to the website, not the API.
 - **[S]** checked against the published GraphQL schema files in [`OpenBeta/openbeta-graphql@develop/src/graphql/schema/`](https://github.com/OpenBeta/openbeta-graphql/tree/develop/src/graphql/schema). Not run live.
 - **[I]** my own inference or recommendation. Not confirmed by OpenBeta.
 
@@ -107,7 +113,7 @@ Every field below must pass through the location-privacy formatter (`src/lib/loc
 | `Area.content.areaLocation`, `Climb.content.location` | Free-text approach or parking directions. These can contain GPS or detailed directions. **Do not cache or render them** (also a licensing reason, §1) |
 | `Area.media`, `Climb.media` | Not cached (licensing). Photos may carry EXIF GPS [I] |
 
-**Requirement for #27 [I]:** raw coordinates from OpenBeta stay inside the client and cache layer. The typed client should return them in a branded or opaque type (e.g. `RawCoords`) that only `location.ts` can unwrap. That lets the type system catch any raw-coordinate shortcut.
+The rules for handling these fields are listed under *Requirements for the #27 implementation* below.
 
 ### 5. Test areas (verified live) [L]
 
@@ -248,9 +254,35 @@ query BulkSubtree($ancestors: [String!]!, $limit: Int, $offset: Int) {
 2. **Mirror everything in bulk** from the Parquet export or `bulkAreas`. Robust, but it duplicates OpenBeta's data (against PRD §2.4) and is more than v1 needs. Possible later for search or offline use.
 3. **Lazy read-through cache with a TTL, refreshed in the background (stale-while-revalidate)**, covering only areas and climbs that users visit or that scans reference. **Recommended.**
 
-## Decision (proposed)
+## Decision
 
-Use option 3, with the following design. Implementation belongs to #27, and the schema shape must land in #3 first.
+Use option 3, with the design below. The implementation belongs to #27, and the schema shape must land in #3 first.
+
+### Privacy decisions (maintainer, final)
+
+- **D1. If no privacy row exists anywhere in an area's ancestor chain, the default is `exact`.**
+  - *Rationale:* OpenBeta already publishes these coordinates openly, so hiding them adds no protection for unflagged areas. A blanket fuzz would make the core browse and approach experience worse everywhere, to protect against a risk that only explicit flags can actually address. Protection comes from the flags themselves, plus a fail-closed formatter (rule P1 below).
+- **D2. Names and path tokens of hidden areas are public.** They may appear in `area_cache`, in search results and in the `ILIKE` fallback. Only coordinates, and anything else that encodes location, are protected: `lat`/`lng`, `bbox`, `polygon`, approach or location text, and proximity queries such as "crags near".
+  - *Rationale:* OpenBeta publishes the names openly, so withholding them would be a false sense of security. Showing the name lets the area page say "location hidden at the request of …". What helps someone get to a sensitive area is where it is, not what it is called.
+
+### Effective-privacy rules (normative for `src/lib/location.ts`)
+
+- **P1. Fail closed.** The formatter returns `hidden` whenever it cannot *prove* an answer. That covers:
+  - a DB or lookup error;
+  - an area that is unknown or not in the cache;
+  - a cache row whose `ancestors` are missing, or where any ancestor is not itself in the cache;
+  - a cache row whose ancestors are stale (see P3).
+- **P2. Default `exact` (D1) applies only after a successful lookup.** Every ancestor must be known, and none of them, nor the area itself, may have an `area_privacy` row.
+- **P3. An area whose parent changes is hidden until a reviewer re-confirms it.**
+  - When a refresh returns `ancestors` that differ from the cached ones, write the new ancestors and set `area_cache.ancestors_changed_at = now()`.
+  - Any area with `ancestors_changed_at` set is treated as `hidden`, and so is every descendant.
+  - A reviewer clears the flag through a review action. This closes the hole where OpenBeta moves an area out from under a hidden ancestor and a refresh silently exposes it.
+- **P4. The most restrictive value wins.** If privacy rows exist in the chain, the effective value is the most restrictive one among the area itself and all its ancestors.
+- **P5. `fuzzed_1km` must be deterministic and not reversible.**
+  - Compute the offset once per area, for example as an HMAC of the area UUID with a server-side secret, mapped to a point up to 1 km away.
+  - Every request then returns the same fuzzed point.
+  - Do **not** use per-request random jitter: averaging many responses would recover the true point.
+  - Children of a fuzzed area use the parent's fuzzed point, or are each fuzzed the same way. They must never return their own raw coordinates.
 
 ### Table shape sketch [I]
 
@@ -268,6 +300,8 @@ area_cache
   refresh_after      timestamptz not null      -- fetched_at + TTL
   last_error         text                      -- last failed refresh, null if healthy
   last_error_at      timestamptz
+  ancestors_changed_at timestamptz             -- set when a refresh re-parents the area (P3);
+                                               -- non-null ⇒ hidden until a reviewer clears it
 
 area_cache_coords                              -- separate table so RLS can lock it down
   openbeta_area_id   uuid primary key references area_cache
@@ -292,7 +326,24 @@ area_privacy                                   -- OUR data, never overwritten by
   set_by, set_at
 ```
 
-Effective privacy for an area is the **most restrictive** value among the area and all its `ancestors`. If there is no row anywhere in that chain, the default is still to be decided (see Schema flags). If the lookup fails or the data is missing, the formatter **fails closed** and returns `hidden`.
+Effective privacy follows rules P1–P5 above: default `exact` when no row exists and the lookup succeeds, `hidden` on any failure.
+
+### Requirements for the #27 implementation
+
+- **Server-side only.** All OpenBeta calls go through our server, with one global throttle (about 1 request per second, 1 in flight), a 10 s timeout and exponential backoff.
+- **Opaque coordinates.** The typed client returns coordinates as a branded or opaque type (e.g. `RawCoords`) that only `src/lib/location.ts` can unwrap.
+- **Coordinates in their own table.** Raw coordinates are stored only in `area_cache_coords` and `climb_cache_coords`. Those tables have no anon or authenticated SELECT policy; the service role reads them, and only through the formatter.
+- **No prose, location text or media.** Never request, cache or render `content.description`, `content.areaLocation`, `content.location` or media.
+- **No proxying of proximity queries.** Never expose `cragsNear` or `cragsWithin`, or any equivalent "near me" feature, without filtering hidden and fuzzed areas.
+- **Implement P1–P5 and test them.** The tests must include:
+  - a hidden ancestor hides every descendant;
+  - a DB error returns `hidden`;
+  - an uncached area returns `hidden`;
+  - missing ancestors return `hidden`;
+  - a re-parented area (`ancestors_changed_at` set) returns `hidden`;
+  - `fuzzed_1km` is stable across calls;
+  - the `bbox` parser handles the observed corner order.
+- **Stale flag.** Our API responses carry `stale` and `fetchedAt`.
 
 ### TTL and refresh [I]
 
@@ -306,14 +357,22 @@ Effective privacy for an area is the **most restrictive** value among the area a
 
 - Browse pages keep working through OpenBeta outages, and OpenBeta sees roughly one request per area per week from us.
 - We hold no OpenBeta prose or photos, which minimizes licensing exposure and duplication.
-- Access safety rests on **our own** `area_privacy` data plus fail-closed defaults, not on OpenBeta. This is more work for maintainers, but it is the only option that actually works with what the API offers.
+- Access safety rests on **our own** `area_privacy` data plus fail-closed rules, not on OpenBeta. This is more work for maintainers, but it is the only option that actually works with what the API offers.
+- **Risk accepted with D1: a sensitive area is exposed until someone flags it.** OpenBeta has no sensitivity flags, so an area nobody has flagged shows exact coordinates. Those are the same coordinates OpenBeta already publishes.
+  - *Mitigation:* flag known-sensitive areas when they are seeded. Seeding a new region includes asking or checking the relevant local climbing organization and any known closures.
+  - Flagging must be quick: a maintainer or reviewer can add an `area_privacy` row, and it takes effect on the next request with no cache wait.
+  - LCO requests are honoured as soon as they arrive.
+- **Risk accepted with D2:** the names of hidden areas are discoverable, and path tokens often name the specific crag. Coordinates and anything that encodes location stay protected.
+- **Re-parenting (P3)** can temporarily hide legitimate areas until a reviewer confirms them. That is deliberate: it fails safe.
 
-## Schema flags for #3 (raise on the issue, do not improvise)
+## Schema flags for #3 (posted on the issue; do not improvise)
 
-1. **`area_cache.access_warnings jsonb` has no OpenBeta source.** Replace it with `organizations jsonb`, the LCO list. If we want warnings, they are our own data and belong in a SandBag-owned table.
-2. **`location_privacy` cannot be "set from OpenBeta flags"** (PRD §7), because OpenBeta has no such flags. Move it out of the cache row into a SandBag-owned `area_privacy` table that cache refreshes never overwrite. Privacy inherits down the tree, which needs `area_cache.ancestors uuid[]`.
-3. **Default privacy for areas without a row needs a values decision.** Option (a), `exact`, matches what OpenBeta already publishes. Option (b), `fuzzed_1km` everywhere until an area is reviewed, is safer. The formatter fails closed (`hidden`) on errors either way. I lean towards (a) with a fail-closed formatter, but this should be decided explicitly on #3 and recorded in the PRD.
-4. **Coordinates need column-level protection.** RLS controls rows, not columns. Put coordinates in a separate table with no anon or authenticated SELECT policy, or revoke column privileges. Otherwise the public anon key can read raw coordinates of hidden areas directly from PostgREST. **This is the biggest values risk in the PRD §8 sketch.**
+1. **`area_cache.access_warnings jsonb` has no OpenBeta source.** Replace it with `organizations jsonb`, the list of local climbing organizations. Any warnings we want are our own data and belong in a SandBag-owned table.
+2. **`location_privacy` cannot be "set from OpenBeta flags"** (PRD §7), because OpenBeta has no such flags.
+   - Move it out of the cache row into a SandBag-owned `area_privacy` table that cache refreshes never overwrite.
+   - Privacy inherits down the tree, which needs `area_cache.ancestors uuid[]` and `area_cache.ancestors_changed_at timestamptz` (P3).
+3. **Default privacy is decided (D1):** `exact` when no row exists anywhere in the ancestor chain *and* the lookup succeeds. Otherwise the result fails closed to `hidden` (P1–P2).
+4. **Coordinates need column-level protection.** RLS controls rows, not columns. Put coordinates in separate `area_cache_coords` and `climb_cache_coords` tables with no anon or authenticated SELECT policy, or revoke column privileges. Otherwise the public anon key can read raw coordinates of hidden areas directly from PostgREST. Names stay in the public `area_cache` (D2).
 5. **`climb_cache` is missing from PRD §8.** `scans.openbeta_climb_id` needs a cached name and grade for display. That snapshot also feeds the "sandbagged" delta (PRD §5.7).
 6. **Add refresh-bookkeeping columns:** `refresh_after`, `last_error`, `last_error_at`, `openbeta_updated_at`.
 
