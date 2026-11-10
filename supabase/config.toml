@@ -151,7 +151,6 @@ allowed_mime_types = [
   "image/webp",
 ]
 
-# Allow connections via S3 compatible clients
 # Raw originals of published scans: private forever, server-only (ADR 002 §3, §5).
 # Kept apart from `uploads` so upload cleanup can never touch published data.
 [storage.buckets.originals]
@@ -165,6 +164,7 @@ allowed_mime_types = [
   "application/octet-stream",
 ]
 
+# Allow connections via S3 compatible clients
 [storage.s3_protocol]
 enabled = true
 

@@ -68,8 +68,8 @@ export interface Climb {
   /** First-ascent info, free text. */
   fa_info?: string | null;
   status: ClimbStatus;
-  /** Profile id of the contributor who created the climb. */
-  created_by: string;
+  /** Profile id of the contributor who created the climb; null once their account is deleted. */
+  created_by: string | null;
 }
 
 export type TrustLevel = "contributor" | "reviewer" | "maintainer";
@@ -84,7 +84,8 @@ export interface Profile {
 
 export interface Scan {
   id: string;
-  uploader_id: string;
+  /** Null once the uploader's account is deleted (contributions are kept). */
+  uploader_id: string | null;
   openbeta_area_id: string | null;
   openbeta_climb_id: string | null;
   status: ScanStatus;
@@ -117,7 +118,8 @@ export interface Review {
   subject_type: ReviewSubject;
   /** scans.id, climbs.id, or an OpenBeta area id (clears re-parenting, P3). */
   subject_id: string;
-  reviewer_id: string;
+  /** Null once the reviewer's account is deleted. */
+  reviewer_id: string | null;
   verdict: ReviewVerdict;
   /** Required unless the verdict is "approve". */
   reason: string | null;
