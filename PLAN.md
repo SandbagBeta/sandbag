@@ -97,5 +97,5 @@ Merge discipline: squash-merge, `main` protected (PRs only, CI required), no age
 
 - Supabase Storage vs Cloudflare R2 for mesh files at scale (#18).
 - Edge Function limits for mesh conversion — may need a small worker (Fly.io/Railway) if >150s or >256MB (#16 spike).
-- OpenBeta API: rate limits/ToS for caching; reach out to their community early (#27 spike).
+- OpenBeta API: rate limits/ToS for caching; reach out to their community early (#27 spike). Spike done: [ADR 001](docs/decisions/001-openbeta-api.md) (CC0 data, no published limits/ToS; questions for the OpenBeta community still open).
 - In-app guided capture (v2): browser photogrammetry feasibility spike (#38).
