@@ -5,14 +5,44 @@ on:
   push:
     branches: [main]
 
+# A new push to the same PR cancels the in-flight run.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
+  # Job id `checks` is the required status check in main's branch protection.
+  # Renaming it blocks every PR from merging until protection is updated.
   checks:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEXT_TELEMETRY_DISABLED: 1
     steps:
       - uses: actions/checkout@v4
-      # Placeholder until issue #1 lands the app scaffold.
-      # Then: pnpm install → lint → typecheck → test → build (see issue #4).
-      - name: Verify repo docs present
-        run: |
-          test -f README.md && test -f docs/PRD.md && test -f PLAN.md && test -f CLAUDE.md
-          echo "Scaffold CI placeholder green. Replace via issue #4."
+
+      # Version comes from package.json "packageManager".
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint (eslint + prettier)
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
