@@ -1,6 +1,6 @@
 # 001 — OpenBeta API: terms, rate limits, queries, cache design
 
-- **Status:** Accepted. This was the research spike for #27; the implementation is still open. The privacy decisions D1 and D2 were made by the maintainer.
+- **Status:** Accepted. This was the research spike for #27. The client and cache are implemented in `src/lib/openbeta/` (see *Implementation notes (#27)*). The privacy decisions D1 and D2 were made by the maintainer.
 - **Date:** 2026-11-09
 - **Lane:** backend
 - **Refs:** #27 (OpenBeta client + cache), #3 (schema v1). PRD §2, §5.6, §7, §8, §12
@@ -89,7 +89,7 @@ PRD §5.6 and §7 make OpenBeta the source of truth for areas, boulders and clim
 
 - **`metadata.isBoulder` is unreliable.** Every child of Pawtuckaway reports `isBoulder: false`, including "Trailside Boulders" and "Boulder Natural" [L]. At climb level `type.bouldering: true` is populated: the Hammond Pond problem "Transplant" is V3 / 6A [L]. Detect boulders from `climb.type.bouldering` and leaf status, not from `isBoulder`.
 
-- **`metadata.bbox` order.** The schema doc says "NE and SW corners". Live values look like `[minLng, minLat, maxLng, maxLat]`: Hammond Pond returned `[-71.1827, 42.1932, -71.1035, 42.3312]` [L]. Treat the order as unconfirmed and write a parser test against a fixture.
+- **`metadata.bbox` order.** The schema doc says "NE and SW corners". Live values look like `[minLng, minLat, maxLng, maxLat]`: Hammond Pond returned `[-71.1827, 42.1932, -71.1035, 42.3312]` [L]. **Confirmed in #27:** OpenBeta builds `bbox` with Turf's `bbox()` ([`src/geo-utils.ts`](https://github.com/OpenBeta/openbeta-graphql/blob/develop/src/geo-utils.ts), `updateAllAreas.ts`), which returns the RFC 7946 order `[west, south, east, north]` = `[minLng, minLat, maxLng, maxLat]` [V]. The recorded responses for both test areas match (west < east, south < north, centroid inside) [L], and `src/lib/location/store.test.ts` pins it. Child areas usually return `bbox: null` [L].
 
 - **`ancestors` and `pathTokens` include the area itself as the last element** [L]. `bulkAreas` requires `ancestors` to have at least 2 elements [S].
 
@@ -376,6 +376,19 @@ Effective privacy follows rules P1–P5 above: default `exact` when no row exist
 5. **`climb_cache` is missing from PRD §8.** `scans.openbeta_climb_id` needs a cached name and grade for display. That snapshot also feeds the "sandbagged" delta (PRD §5.7).
 6. **Add refresh-bookkeeping columns:** `refresh_after`, `last_error`, `last_error_at`, `openbeta_updated_at`.
 
+## Implementation notes (#27)
+
+Where the implementation differs from, or adds to, the design above:
+
+- **Layout.** `src/lib/openbeta/` (queries, transport/throttle, parsing, read-through cache) never reads coordinates. `src/lib/location/store.ts` owns the coordinate selections, the opaque `RawCoords` handle, the bbox parser and the `*_coords` upserts.
+- **AreaDetail also selects the area's own `climbs`**, so a leaf page is one request, and drops `isBoulder`, `gradeContext`, `mp_id` and `safety` (unreliable or no column). `SearchAreas` selects no coordinates at all.
+- **Ancestors and children.** A fetch inserts any missing ancestor rows (derived from `ancestors` + `pathTokens`) so the privacy resolver can walk the chain (P1), and inserts missing child rows. Both are inserted already stale, so a visit fetches them fully in the background. A child whose cached ancestors differ from its parent's chain is re-parented and flagged (P3).
+- **Skipping writes.** When `authorMetadata.updatedAt`, name, `totalClimbs` and ancestors are unchanged, only the area row's bookkeeping is updated. Climbs and coordinates are still upserted, because nothing confirms that editing a climb bumps its area's `updatedAt`.
+- **Backoff is fail-fast.** After a 429, 5xx, timeout or network error the throttle blocks for 2 s, doubling to a 5 min cap (or `Retry-After`). Requests that arrive while blocked fail immediately with `backoff` and the caller serves the cache, rather than holding a page open.
+- **The throttle is per server instance.** Vercel instances do not share memory, so N warm instances can each send 1 req/s. The cache keeps real traffic far below that.
+- **An HTML 200 was seen live** once (an edge page instead of JSON). Non-JSON bodies are treated as `bad_response`.
+- **`last_error`** holds a short code (`timeout`, `http_503`, `bad_response`, `not_found`, ...), never a response body.
+
 ## Open questions for the OpenBeta community
 
 1. Are there rate limits or usage expectations for `api.openbeta.io`? Is there a Cloudflare rule we should know about, or a preferred `User-Agent` convention?
@@ -383,7 +396,7 @@ Effective privacy follows rules P1–P5 above: default `exact` when no row exist
 3. Is there a ToS for the API? Is CC0 the definitive license for all `Area` and `Climb` fields returned by the API, given Mountain Project provenance? Are names and grades fine, with only prose being sensitive?
 4. Is there any plan for structured access, closure or sensitivity flags (e.g. nesting closures, LCO "do not publish coordinates" requests)? Could we contribute to that rather than keep a parallel list?
 5. How do LCOs (e.g. SENECC) currently ask OpenBeta to hide or fuzz coordinates? Can we honour the same mechanism?
-6. Is `metadata.bbox` in `[minLng, minLat, maxLng, maxLat]` order? Is `isBoulder` expected to be populated, or should we rely on `climb.type.bouldering`?
+6. ~~Is `metadata.bbox` in `[minLng, minLat, maxLng, maxLat]` order?~~ Yes, from their source (#27). Is `isBoulder` expected to be populated, or should we rely on `climb.type.bouldering`?
 7. How does `area_name.match` behave (substring, prefix or regex; case sensitivity)?
 8. Is there a stable public URL pattern for linking to an area or climb on openbeta.io for attribution? I assume `https://openbeta.io/area/<uuid>` and `https://openbeta.io/climb/<uuid>`, but this is unverified [I].
 9. Would they welcome links back from openbeta.io to 3D scans (open CC BY-SA data keyed to their UUIDs)?
