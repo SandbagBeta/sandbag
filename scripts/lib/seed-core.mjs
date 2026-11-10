@@ -15,6 +15,16 @@ export const DEFAULT_PATHS = Object.freeze({
 export const STORAGE_BUCKET = "published";
 export const STORAGE_PATH = "demo/demo-boulder.glb";
 
+/** True when the Supabase URL points at a local stack (`supabase start`). */
+export function isLocalSupabaseUrl(url) {
+  try {
+    const host = new URL(url).hostname;
+    return host === "localhost" || host === "127.0.0.1";
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Validates the committed fixtures and returns what the seed needs from them.
  * Throws a plain-English error on the first problem.
@@ -66,6 +76,7 @@ export async function validateFixtures(paths = DEFAULT_PATHS) {
  * @param {(url: string, key: string) => any} opts.createClient  supabase-js factory (injectable for tests)
  * @param {(msg: string) => void} [opts.log]
  * @param {typeof DEFAULT_PATHS} [opts.paths]
+ * @param {boolean} [opts.force]  allow a non-local NEXT_PUBLIC_SUPABASE_URL (`pnpm seed --force`)
  * @returns {Promise<{ uploaded: boolean, hash: string }>}
  */
 export async function runSeed({
@@ -73,6 +84,7 @@ export async function runSeed({
   createClient,
   log = console.log,
   paths = DEFAULT_PATHS,
+  force = false,
 }) {
   const info = await validateFixtures(paths);
   log(
@@ -89,6 +101,12 @@ export async function runSeed({
       `storage: skipped — set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to upload to bucket "${STORAGE_BUCKET}" at ${STORAGE_PATH}.`,
     );
     return { uploaded: false, hash: info.hash };
+  }
+  if (!force && !isLocalSupabaseUrl(url)) {
+    throw new Error(
+      `refusing to upload: NEXT_PUBLIC_SUPABASE_URL (${url}) is not a local stack (localhost or 127.0.0.1). ` +
+        `This script uses the service-role key, which bypasses RLS. If you really mean to seed a remote project, run \`pnpm seed --force\`.`,
+    );
   }
 
   const supabase = createClient(url, key);

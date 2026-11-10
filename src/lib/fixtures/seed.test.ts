@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   DEFAULT_PATHS,
+  isLocalSupabaseUrl,
   runSeed,
   STORAGE_BUCKET,
   STORAGE_PATH,
@@ -87,6 +88,48 @@ describe("runSeed", () => {
       upsert: true,
       contentType: "model/gltf-binary",
     });
+  });
+
+  it("refuses a non-local Supabase URL without --force and never creates a client", async () => {
+    const { createClient } = mockSupabase();
+    const remote = {
+      ...env,
+      NEXT_PUBLIC_SUPABASE_URL: "https://abc.supabase.co",
+    };
+    await expect(
+      runSeed({ env: remote, createClient, log: vi.fn() }),
+    ).rejects.toThrow(
+      /refusing to upload.*not a local stack.*pnpm seed --force/,
+    );
+    expect(createClient).not.toHaveBeenCalled();
+  });
+
+  it("uploads to a non-local Supabase URL when force is set", async () => {
+    const { createClient, upload } = mockSupabase();
+    const remote = {
+      ...env,
+      NEXT_PUBLIC_SUPABASE_URL: "https://abc.supabase.co",
+    };
+    const result = await runSeed({
+      env: remote,
+      createClient,
+      log: vi.fn(),
+      force: true,
+    });
+    expect(result.uploaded).toBe(true);
+    expect(createClient).toHaveBeenCalledWith(
+      remote.NEXT_PUBLIC_SUPABASE_URL,
+      env.SUPABASE_SERVICE_ROLE_KEY,
+    );
+    expect(upload).toHaveBeenCalledTimes(1);
+  });
+
+  it("treats localhost and 127.0.0.1 as local, anything else as remote", () => {
+    expect(isLocalSupabaseUrl("http://127.0.0.1:54321")).toBe(true);
+    expect(isLocalSupabaseUrl("http://localhost:54321")).toBe(true);
+    expect(isLocalSupabaseUrl("https://abc.supabase.co")).toBe(false);
+    expect(isLocalSupabaseUrl("http://127.0.0.1.evil.example")).toBe(false);
+    expect(isLocalSupabaseUrl("not a url")).toBe(false);
   });
 
   it("surfaces storage errors", async () => {

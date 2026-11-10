@@ -13,7 +13,10 @@ if (existsSync(envFile)) {
   process.loadEnvFile(envFile); // does not override vars already in the environment
 }
 
-runSeed({ env: process.env, createClient }).catch((err) => {
+// --force allows uploading to a non-local Supabase URL (see seed-core.mjs).
+const force = process.argv.includes("--force");
+
+runSeed({ env: process.env, createClient, force }).catch((err) => {
   console.error(`pnpm seed failed: ${err.message}`);
   process.exit(1);
 });
