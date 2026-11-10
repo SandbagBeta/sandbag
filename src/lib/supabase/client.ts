@@ -9,6 +9,11 @@ import { getPublicSupabaseEnv } from "./env";
  * from multiple components is cheap.
  */
 export function createClient() {
-  const { url, anonKey } = getPublicSupabaseEnv();
+  // Literal `process.env.NEXT_PUBLIC_*` reads: Next.js inlines only those into
+  // the browser bundle, so passing `process.env` itself would arrive empty.
+  const { url, anonKey } = getPublicSupabaseEnv({
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  });
   return createBrowserClient(url, anonKey);
 }

@@ -25,7 +25,15 @@ describe("isGatedPath", () => {
     expect(isGatedPath(path)).toBe(false);
   });
 
-  it("is extensible with more prefixes (#15 /upload, #19 /review)", () => {
+  it("gates /upload and its subpaths (#15), not look-alikes", () => {
+    expect(GATED_PATH_PREFIXES).toContain("/upload");
+    expect(isGatedPath("/upload")).toBe(true);
+    expect(isGatedPath("/upload/123")).toBe(true);
+    expect(isGatedPath("/uploads")).toBe(false);
+    expect(gateRedirect("/upload", "", false)).toBe("/sign-in?next=%2Fupload");
+  });
+
+  it("is extensible with more prefixes (#19 /review)", () => {
     const prefixes = [...GATED_PATH_PREFIXES, "/upload", "/review"];
     expect(isGatedPath("/upload", prefixes)).toBe(true);
     expect(isGatedPath("/review/123", prefixes)).toBe(true);

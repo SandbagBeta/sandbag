@@ -53,6 +53,12 @@ http://127.0.0.1:54321/auth/v1/callback
 
 `/account` requires a signed-in user. Gated routes are listed in `GATED_PATH_PREFIXES` (`src/lib/auth/gating.ts`) and enforced by `src/proxy.ts`; gated pages also check the user server-side.
 
+### Uploading a scan
+
+`/upload` (sign-in required) takes a `.glb`, `.gltf`, `.ply`, or a `.zip` holding an `.obj` or `.gltf` with its textures, up to 200 MB. It creates a `scans` row (status `uploaded`), then sends the file to Supabase Storage over TUS resumable uploads in 6 MB chunks at `uploads/{user_id}/{scan_id}/raw/source.<ext>`. The original filename is never stored. A dropped connection retries with backoff, and reloading the page and picking the same file resumes from the last chunk. Code: `src/lib/upload/`, `src/app/upload/`.
+
+**File size depends on where Supabase runs.** The local stack (`supabase start`) and self-hosted setups use the 200 MiB limit in `supabase/config.toml`. **The hosted Supabase Free plan caps every file at 50 MB, and that cap can't be raised** ([file limits](https://supabase.com/docs/guides/storage/uploads/file-limits)). On a hosted Free project, uploads over 50 MB pass the page's 200 MB check and are then rejected by Storage, and the page says so. Pro and above allow up to 500 GB per file, configured in the dashboard. This is accepted for development ([ADR 002](docs/decisions/002-mesh-storage.md) D2).
+
 ## Stack
 
 Next.js (App Router, TypeScript) · three.js via react-three-fiber · Supabase (Postgres + Auth + Storage + Edge Functions) · [OpenBeta](https://openbeta.io) GraphQL API for climbing metadata · Vercel.
