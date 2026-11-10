@@ -32,6 +32,12 @@ returns 404 on Vercel production and on self-hosted `next start` builds. It
 stays available in `next dev` and on Vercel preview deployments, so PR
 previews can be tested on real phones (see `src/app/dev/devHarness.ts`).
 
+To test on a phone against your local dev server instead: add your computer's
+LAN IP to `DEV_ALLOWED_ORIGINS` in `.env.local`, run `pnpm dev -H 0.0.0.0`, and
+open `http://<lan-ip>:3000/dev/viewer` on the same Wi-Fi. Without the env var
+the page stays blank, because Next.js blocks dev scripts for non-localhost
+origins.
+
 ## Files
 
 | File                     | Role                                                                                                                                |
