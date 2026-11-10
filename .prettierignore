@@ -11,3 +11,6 @@ LICENSE
 .github
 docs
 project
+
+# Recorded OpenBeta API responses, kept byte-for-byte as served
+src/lib/openbeta/__fixtures__

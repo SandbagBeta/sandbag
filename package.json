@@ -18,7 +18,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "seed": "node scripts/seed.mjs",
-    "fixtures:generate": "node scripts/generate-demo-boulder.mjs"
+    "fixtures:generate": "node scripts/generate-demo-boulder.mjs",
+    "openbeta:smoke": "node scripts/openbeta-smoke.mjs"
   },
   "dependencies": {
     "@react-three/drei": "10.7.9",

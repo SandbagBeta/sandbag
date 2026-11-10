@@ -49,7 +49,12 @@ const files = walk(SRC).map((path) => ({
 
 describe("location module never reaches client code", () => {
   it("entry points that read coords or the secret import server-only first", () => {
-    for (const rel of ["lib/location.ts", "lib/location/fuzz.ts"]) {
+    for (const rel of [
+      "lib/location.ts",
+      "lib/location/fuzz.ts",
+      "lib/location/store.ts",
+      "lib/openbeta/cache.ts",
+    ]) {
       const file = files.find((f) => f.rel === rel);
       expect(file, rel).toBeDefined();
       expect(file!.text).toMatch(/^import "server-only";$/m);
