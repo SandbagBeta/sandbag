@@ -22,9 +22,19 @@ export default function Home() {
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-12 px-6 py-20">
       <header className="flex flex-col gap-4">
-        <p className="text-sandstone text-sm font-semibold tracking-widest uppercase">
-          Pre-alpha
-        </p>
+        <div className="flex items-center justify-between">
+          <p className="text-sandstone text-sm font-semibold tracking-widest uppercase">
+            Pre-alpha
+          </p>
+          {/* Static link keeps this page static; signed-out users are sent
+              to /sign-in by the proxy. */}
+          <a
+            href="/account"
+            className="text-sm font-medium hover:underline focus-visible:outline-2 focus-visible:outline-offset-2"
+          >
+            Sign in / Account
+          </a>
+        </div>
         <h1 className="text-5xl font-bold tracking-tight">SandBag</h1>
         <p className="text-lg text-stone-600 dark:text-stone-400">
           Open-source 3D boulder visualizer, built on community contribution.

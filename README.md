@@ -38,6 +38,21 @@ Check the wiring at <http://localhost:3000/api/health> — it reports `"supabase
 
 `pnpm seed` validates the committed demo fixture (`public/fixtures/demo-boulder.glb` + `src/lib/fixtures/demo-boulder.json`, see [public/fixtures/README.md](public/fixtures/README.md)) and, when `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set in `.env.local`, uploads the GLB to the `published` storage bucket, then upserts the demo scan, its 2 climbs, their holds and paths, and publishes them through the lifecycle module (`src/lib/lifecycle`). It is safe to re-run: rows are keyed on the fixture's fixed ids, and already-published rows are left alone. Demo rows have no author (`uploader_id`/`created_by` are null). If a demo row ends up somewhere it cannot be published from, `npx supabase db reset` starts the local database fresh. Without the env vars it just reports and exits 0, so the quickstart works with no Supabase stack. As a guard against pointing a service-role key at production, it only writes to `localhost`/`127.0.0.1` unless you pass `pnpm seed --force`. The service-role key is for scripts only — never expose it under a `NEXT_PUBLIC_` name.
 
+### Setting up OAuth locally
+
+Sign-in uses GitHub and Google through Supabase Auth. The provider redirects to Supabase's callback, which then sends the browser to the app's `/auth/callback`. Register this callback URL with both providers:
+
+```
+http://127.0.0.1:54321/auth/v1/callback
+```
+
+1. **GitHub:** Settings → Developer settings → OAuth Apps → New OAuth App. Homepage URL `http://127.0.0.1:3000`, authorization callback URL as above. Copy the client ID and generate a client secret.
+2. **Google:** Google Cloud Console → APIs & Services → Credentials → Create credentials → OAuth client ID → *Web application* (configure the consent screen first if asked). Add the callback URL above under *Authorized redirect URIs*.
+3. Set the four `SUPABASE_AUTH_EXTERNAL_*` variables listed in `.env.example`. The Supabase CLI reads them (via `env(...)` in `supabase/config.toml`), not Next.js, so export them in your shell or put them in `supabase/.env` (git-ignored). Never commit them.
+4. Restart the stack (`supabase stop && supabase start`), run `pnpm dev`, open <http://127.0.0.1:3000/sign-in> and pick a provider. On first sign-in you get a profile with a handle derived from your provider username or name, which you can change at `/account`. `127.0.0.1:3000` and `localhost:3000` are both allowed redirect targets; stay on one host for the whole flow, since the PKCE verifier cookie is per host.
+
+`/account` requires a signed-in user. Gated routes are listed in `GATED_PATH_PREFIXES` (`src/lib/auth/gating.ts`) and enforced by `src/proxy.ts`; gated pages also check the user server-side.
+
 ## Stack
 
 Next.js (App Router, TypeScript) · three.js via react-three-fiber · Supabase (Postgres + Auth + Storage + Edge Functions) · [OpenBeta](https://openbeta.io) GraphQL API for climbing metadata · Vercel.
