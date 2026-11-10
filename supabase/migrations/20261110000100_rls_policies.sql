@@ -68,7 +68,8 @@ create policy area_privacy_write on public.area_privacy for all to authenticated
   using ((select private.has_trust('maintainer')))
   with check ((select private.has_trust('maintainer')) and set_by = (select auth.uid()));
 
--- scans
+-- scans. Published rows are public in full, so qc_report must never carry
+-- location (EXIF GPS, georeferenced offsets): the QC pipeline (#16) strips it.
 create policy scans_read on public.scans for select to anon, authenticated
   using (
     status = 'published'
@@ -92,6 +93,7 @@ create policy climbs_read on public.climbs for select to anon, authenticated
     or created_by = (select auth.uid())
     or (select private.has_trust('reviewer'))
   );
+-- Annotation starts once a scan is published (PRD flow: M2 publish → M3 annotate).
 create policy climbs_insert_own on public.climbs for insert to authenticated
   with check (
     created_by = (select auth.uid())
@@ -103,7 +105,8 @@ create policy climbs_update_own_pending on public.climbs for update to authentic
 create policy climbs_delete_own_pending on public.climbs for delete to authenticated
   using (created_by = (select auth.uid()) and status = 'pending_review');
 
--- holds and paths follow their climb: visible when the climb is (the subquery
+-- holds and paths follow their climb. scan_content_hash agreement with the
+-- scan is enforced by annotation versioning (#26), not here. visible when the climb is (the subquery
 -- runs under climbs' own RLS), writable only on the author's pending climb.
 create policy holds_read on public.holds for select to anon, authenticated
   using (exists (select 1 from public.climbs c where c.id = climb_id));
@@ -140,8 +143,16 @@ create policy reviews_read on public.reviews for select to authenticated
     or (subject_type = 'climb' and exists (select 1 from public.climbs c
       where c.id = subject_id and c.created_by = (select auth.uid())))
   );
+-- No self-review: a reviewer can't judge their own scan or climb.
 create policy reviews_insert_reviewer on public.reviews for insert to authenticated
-  with check ((select private.has_trust('reviewer')) and reviewer_id = (select auth.uid()));
+  with check (
+    (select private.has_trust('reviewer'))
+    and reviewer_id = (select auth.uid())
+    and not (subject_type = 'scan' and exists (select 1 from public.scans s
+      where s.id = subject_id and s.uploader_id = (select auth.uid())))
+    and not (subject_type = 'climb' and exists (select 1 from public.climbs c
+      where c.id = subject_id and c.created_by = (select auth.uid())))
+  );
 
 -- Storage (ADR 002 §3). Keys: uploads/{uploader_id}/{scan_id}/raw/{file}.
 -- Contributors touch only their own prefix, and only while the scan is
