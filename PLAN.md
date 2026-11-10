@@ -38,7 +38,7 @@ Goal: multiple coding agents working different issues simultaneously without ste
 |---|---|---|
 | **Claude Code cloud sessions** (claude.ai/code / app) | The default workhorse. One session per issue; each gets an isolated sandbox, branches, opens a PR | Kick off 2–3 in parallel, review PRs when they land. Works from phone between classes |
 | **Local Claude Code + git worktrees** | Work needing fast iteration against a running local stack (viewer/annotation UX, Supabase local), or anything you want to watch closely | `git worktree add ../sandbag-issue-NN -b feat/NN`; one terminal tab per worktree. You are the merge point |
-| **GitHub Actions — `@claude` on issues** (claude-code-action) | Async small/well-specified issues: bugs, docs, test gaps, refactors. Comment `@claude` on the issue → agent opens a PR | Set up in M0 (#7). Also runs the **reviewer agent** on every PR |
+| **GitHub Actions — `@claude` on issues** (claude-code-action) | Async small/well-specified issues: bugs, docs, test gaps, refactors. Comment `@claude` on the issue → agent opens a PR | Set up in M0 (#7). Also runs the **reviewer agent** on a PR when the `claude-review` label is added (opt-in to save usage; re-add the label to re-review) |
 
 Rule of thumb: UX-heavy or architecturally novel → local; well-scoped feature with clear spec → cloud session; small and mechanical → `@claude` the issue.
 
@@ -51,7 +51,7 @@ Role instructions live in `.claude/agents/` (subagent definitions) and scoped `C
 | `frontend` | `lane:frontend` | Viewer, annotation UI, browse pages (Next.js/r3f/Tailwind) | `.claude/agents/frontend.md` |
 | `backend` | `lane:backend` | Schema, RLS, QC pipeline, storage, OpenBeta integration | `.claude/agents/backend.md` |
 | `pipeline-3d` | `lane:3d` | Mesh conversion/compression/validation, gltf-transform, thumbnails | `.claude/agents/pipeline-3d.md` |
-| `reviewer` | — | Reviews every PR: correctness, PRD-value alignment, RLS/security, scope creep | `.claude/agents/reviewer.md` |
+| `reviewer` | — | Reviews PRs labeled `claude-review`: correctness, PRD-value alignment, RLS/security, scope creep | `.claude/agents/reviewer.md` |
 
 Docs/tests have no dedicated agent: every PR includes its own tests + doc updates (enforced by reviewer).
 
@@ -61,8 +61,8 @@ Docs/tests have no dedicated agent: every PR includes its own tests + doc update
 groom issue (clear spec, lane label, milestone, "agent-ready" when self-contained)
 → assign to a runtime (cloud session / local worktree / @claude comment)
 → agent works on branch feat/<issue#>-<slug>, opens PR closing #NN
-→ gate 1: CI — lint (eslint+prettier), typecheck (tsc), unit tests (vitest), build
-→ gate 2: reviewer agent posts structured review (blocking concerns vs nits)
+→ gate 1: CI — lint (eslint+prettier, incl. `sandbag/no-raw-coordinates`), typecheck (tsc), unit tests (vitest), build; CodeQL security scan
+→ gate 2: add the `claude-review` label → reviewer agent posts structured review (blocking concerns vs nits)
 → gate 3: Collin — reads reviewer output + diff, resolves concerns, merges
 ```
 

@@ -4,7 +4,7 @@ You are working on **SandBag**, an open-source 3D boulder visualizer. Read this 
 
 ## Non-negotiable values (PRD §2)
 
-1. **Access privacy is safety-critical.** Any code path that outputs coordinates MUST go through the location-privacy formatter (`src/lib/location.ts` once it exists). Never add a raw-coords shortcut. `location_privacy: hidden` areas must never leak coords — not in APIs, logs, OG tags, or exports.
+1. **Access privacy is safety-critical.** Any code path that outputs coordinates MUST go through the location-privacy formatter (`src/lib/location.ts` once it exists). Never add a raw-coords shortcut. Lint enforces this: `sandbag/no-raw-coordinates` (`eslint-rules/`) fails CI on geo fields (`lat`/`lng`/`bbox`/…), coordinate GraphQL selections and `*_coords` tables outside `src/lib/location.ts`. Disabling it on a line needs a written reason. `location_privacy: hidden` areas must never leak coords — not in APIs, logs, OG tags, or exports.
 2. **Open data.** Never add features that lock contributed data behind auth or obscure formats. Exports stay documented and complete.
 3. **Don't duplicate OpenBeta.** Climbing metadata (areas, routes, grades-of-record) comes from OpenBeta; we store the 3D layer only.
 
