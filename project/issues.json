@@ -8,6 +8,7 @@
     { "title": "M5 Launch", "description": "Seed data, polish, docs, dataset export, community posts" }
   ],
   "labels": [
+    { "name": "claude-review", "color": "5319e7", "description": "Run the Claude reviewer agent on this PR (removed after the run)" },
     { "name": "lane:frontend", "color": "1d76db", "description": "Viewer, annotation UI, browse pages" },
     { "name": "lane:backend", "color": "0e8a16", "description": "Schema, RLS, API, pipeline orchestration" },
     { "name": "lane:3d", "color": "fbca04", "description": "Mesh processing, conversion, validation" },
