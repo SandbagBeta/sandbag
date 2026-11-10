@@ -18,6 +18,11 @@ export interface BoulderViewerProps {
   className?: string;
   /** Visually hidden text alternative (description, climb list, ...). */
   children?: ReactNode;
+  /**
+   * Extra r3f content rendered inside the Canvas in world space, mounted with
+   * the model (e.g. hold markers). Imperative updates must `invalidate()`.
+   */
+  scene?: ReactNode;
 }
 
 /**
@@ -29,6 +34,7 @@ export function BoulderViewer({
   label,
   className = "",
   children,
+  scene,
 }: BoulderViewerProps) {
   const controlsRef = useRef<OrbitControlsRef | null>(null);
   const [fit, setFit] = useState<CameraFit | null>(null);
@@ -60,6 +66,7 @@ export function BoulderViewer({
           <directionalLight position={[-3, 2, -4]} intensity={0.4} />
           <Suspense fallback={null}>
             <ScanModel src={src} controlsRef={controlsRef} onFit={setFit} />
+            {scene}
           </Suspense>
           {fit && (
             <Grid

@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
-/** Dev harness: /dev/viewer?src=<glb-url>. Defaults to the #8 demo fixture. */
+/** Dev harness: /dev/viewer?src=<glb-url>&climb=<id>. Defaults to the #8 demo fixture. */
 export default async function ViewerDevPage({
   searchParams,
 }: {
@@ -23,7 +23,7 @@ export default async function ViewerDevPage({
   // Dev-only harness: 404 on Vercel production and self-hosted builds,
   // available in dev and on Vercel preview deployments (phone testing).
   if (!isDevHarnessEnabled()) notFound();
-  const { src } = await searchParams;
+  const { src, climb } = await searchParams;
   const parsed = parseViewerSrc(Array.isArray(src) ? src[0] : src);
   return (
     <main className="relative h-dvh w-full">
@@ -35,7 +35,10 @@ export default async function ViewerDevPage({
           Ignored invalid <code>?src</code>; showing the demo fixture.
         </p>
       )}
-      <ViewerClient src={parsed ?? DEFAULT_VIEWER_SRC} />
+      <ViewerClient
+        src={parsed ?? DEFAULT_VIEWER_SRC}
+        climb={Array.isArray(climb) ? climb[0] : climb}
+      />
     </main>
   );
 }
