@@ -22,7 +22,7 @@ Climbers scan boulders with their phones, upload the renders, and annotate them 
 
 ## Quickstart (dev)
 
-Prereqs: Node 20+, pnpm, [Supabase CLI](https://supabase.com/docs/guides/cli), Docker.
+Prereqs: Node 24+, pnpm, [Supabase CLI](https://supabase.com/docs/guides/cli), Docker.
 
 ```bash
 git clone https://github.com/sandbagbeta/sandbag && cd sandbag
