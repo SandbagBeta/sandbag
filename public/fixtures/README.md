@@ -13,7 +13,8 @@ work against before a real capture lands. It has no geographic location.
   about 2.5 m wide × 1.8 m tall × 1.85 m deep, 62,208 triangles, vertex colors,
   no texture. One mesh, one primitive.
 - Served by Next.js at `/fixtures/demo-boulder.glb`; `pnpm seed` uploads the
-  same bytes to the `published` storage bucket at `demo/demo-boulder.glb`.
+  same bytes to the `published` storage bucket at `demo/demo-boulder.glb`, then
+  inserts the scan, climbs, holds and paths below as published database rows.
 
 The companion `src/lib/fixtures/demo-boulder.json` holds the scan metadata,
 two climbs, their holds (all four types) and paths (line, topout, downclimb),

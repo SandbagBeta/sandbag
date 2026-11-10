@@ -30,13 +30,13 @@ pnpm install
 supabase start               # local Postgres/Auth/Storage stack (needs Docker)
 cp .env.example .env.local   # then paste the keys printed by `supabase start`
                              # (`supabase status` reprints them any time)
-pnpm seed                    # demo GLB only (climbs come with #3)
+pnpm seed                    # demo GLB + 1 scan, 2 climbs, holds, paths
 pnpm dev                     # http://localhost:3000
 ```
 
 Check the wiring at <http://localhost:3000/api/health> — it reports `"supabase": "configured"` once `.env.local` is filled in. `supabase/config.toml` declares three storage buckets: `uploads` (private, raw contributor scans), `published` (public, QC-approved GLBs) and `originals` (private, raw files of published scans); `supabase start` creates them. `supabase start` also applies `supabase/migrations/`. Run the database tests with `supabase test db`.
 
-`pnpm seed` validates the committed demo fixture (`public/fixtures/demo-boulder.glb` + `src/lib/fixtures/demo-boulder.json`, see [public/fixtures/README.md](public/fixtures/README.md)) and, when `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set in `.env.local`, uploads the GLB to the `published` storage bucket. **Only the demo GLB is uploaded — no climbs, holds or paths are seeded until schema v1 (issue #3) lands.** Without the env vars it just reports and exits 0, so the quickstart works with no Supabase stack. As a guard against pointing a service-role key at production, the upload only runs against `localhost`/`127.0.0.1` unless you pass `pnpm seed --force`. The service-role key is for scripts only — never expose it under a `NEXT_PUBLIC_` name.
+`pnpm seed` validates the committed demo fixture (`public/fixtures/demo-boulder.glb` + `src/lib/fixtures/demo-boulder.json`, see [public/fixtures/README.md](public/fixtures/README.md)) and, when `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set in `.env.local`, uploads the GLB to the `published` storage bucket, then upserts the demo scan, its 2 climbs, their holds and paths, and publishes them through the lifecycle module (`src/lib/lifecycle`). It is safe to re-run: rows are keyed on the fixture's fixed ids, and already-published rows are left alone. Demo rows have no author (`uploader_id`/`created_by` are null). If a demo row ends up somewhere it cannot be published from, `npx supabase db reset` starts the local database fresh. Without the env vars it just reports and exits 0, so the quickstart works with no Supabase stack. As a guard against pointing a service-role key at production, it only writes to `localhost`/`127.0.0.1` unless you pass `pnpm seed --force`. The service-role key is for scripts only — never expose it under a `NEXT_PUBLIC_` name.
 
 ### Setting up OAuth locally
 
