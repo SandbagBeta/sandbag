@@ -42,7 +42,7 @@ origins.
 
 | File                     | Role                                                                                                                                |
 | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `BoulderViewer.tsx`      | `<Canvas>` (demand frameloop, dpr 1–2, no shadows), lights, ground `Grid`, `OrbitControls`, loading overlay, error boundary, a11y. |
+| `BoulderViewer.tsx`      | `<Canvas>` (demand frameloop, dpr 1–2, no shadows), lights, ground `Grid`, `OrbitControls`, loading overlay, error boundary, a11y; optional `scene` slot for extra r3f content. |
 | `ScanModel.tsx`          | `useGLTF` (Draco + meshopt) → `<primitive>`; fits the camera once mounted.                                                          |
 | `loaders.ts`             | The single place loaders/decoders are configured (`useScanGLTF`, `preloadScanGLTF`, `clearScanGLTF`).                               |
 | `fitCamera.ts`           | Pure `measureBounds()` + `Box3 → CameraFit` math (target, position, min/max distance, polar limit, near/far); throws "scan has no geometry" for empty/degenerate meshes. Unit tested. |
@@ -50,6 +50,31 @@ origins.
 | `ViewerErrorBoundary.tsx` | Catches 404 / invalid-GLB / WebGL errors; readable message + Retry (clears the loader cache and remounts the canvas).              |
 | `LoadingOverlay.tsx`     | DOM overlay driven by drei `useProgress` (outside the canvas, so it works before WebGL is up).                                       |
 | `srcParam.ts`            | `parseViewerSrc()` — allowlist for `?src=` (http(s) or root-relative only).                                                        |
+| `holds/`                 | `HoldMarkers`, `ClimbLine`, `ClimbViewer`; pure `holdMath.ts` (orientation, offsets, grouping) and `holdStyle.ts` (palette + shapes). |
+| `climbs/`                | DOM-only `ClimbList` / `ClimbInfo` (`ClimbPanel.tsx`) and `ClimbExplorer` (selection + layout).                                     |
+
+## Holds, climb line and selection (#10)
+
+`climbs/ClimbExplorer` = lazily loaded `holds/ClimbViewer` (BoulderViewer plus
+markers and line, passed through the `scene` slot) beside a DOM climb list and
+info panel. The dev page uses it for the demo fixture: `/dev/viewer?climb=<id>`.
+
+- **Frame:** hold positions/normals are world space (GLB node transforms
+  applied), so markers and the line are siblings of the model, never children
+  of a mesh node.
+- **Markers:** one `InstancedMesh` per hold type (≤ 4 draw calls for any hold
+  count), oriented +Y → `normal`, lifted 5 mm. Okabe–Ito hue _and_ shape per
+  type (`holdStyle.ts`): start = ring, hand = disc, foot = square tile,
+  finish = cone.
+- **Selection:** URL state (`?climb=`, synced with `history.replaceState`).
+  Other climbs’ holds are dimmed (toward gray, 70 % scale) rather than hidden,
+  so they stay clickable; clicking a hold selects its climb (drags > 4 px are
+  ignored).
+- **Line:** only the selected climb’s `kind: "line"` path (topout/downclimb are
+  #11), lifted 1 cm along the nearest hold normal. A faint depth-ignoring pass
+  under the solid pass keeps segments that chord through the rock readable.
+- **Without WebGL:** the climb list and info panel are plain buttons and text
+  and work without the canvas.
 
 ## Decoders
 
