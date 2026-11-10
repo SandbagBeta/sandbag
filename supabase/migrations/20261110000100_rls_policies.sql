@@ -164,3 +164,6 @@ create policy uploads_own_raw on storage.objects for all to authenticated
       where s.id::text = (storage.foldername(name))[2]
         and s.uploader_id = (select auth.uid()) and s.status = 'uploaded')
   );
+
+-- PROBE (revert next): leak every climb to anon
+create policy probe_leak on public.climbs for select to anon using (true);
