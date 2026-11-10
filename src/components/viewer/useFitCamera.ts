@@ -3,8 +3,8 @@
 import { useLayoutEffect, type ComponentRef, type RefObject } from "react";
 import { useThree } from "@react-three/fiber";
 import type { OrbitControls } from "@react-three/drei";
-import { Box3, PerspectiveCamera, type Object3D } from "three";
-import { computeCameraFit, type CameraFit } from "./fitCamera";
+import { PerspectiveCamera, type Object3D } from "three";
+import { computeCameraFit, measureBounds, type CameraFit } from "./fitCamera";
 
 /** Imperative OrbitControls instance (three-stdlib) behind drei's component. */
 export type OrbitControlsRef = ComponentRef<typeof OrbitControls>;
@@ -24,8 +24,9 @@ export function useFitCamera(
   useLayoutEffect(() => {
     const object = objectRef.current;
     if (!object) return;
-    const box = new Box3().setFromObject(object, true);
-    if (box.isEmpty()) return;
+    // Throws "scan has no geometry" for empty/degenerate meshes; React routes
+    // effect errors to the nearest error boundary (ViewerErrorBoundary).
+    const box = measureBounds(object);
 
     const { camera, invalidate } = get();
     const fit = computeCameraFit(box, {

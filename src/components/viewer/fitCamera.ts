@@ -1,4 +1,4 @@
-import { Box3, Vector3 } from "three";
+import { Box3, Vector3, type Object3D } from "three";
 
 /** Camera + OrbitControls settings derived from a scan's bounding box. */
 export interface CameraFit {
@@ -25,6 +25,31 @@ export interface FitOptions {
   margin?: number;
 }
 
+export const NO_GEOMETRY_MESSAGE = "scan has no geometry";
+
+/**
+ * World-space bounds of a loaded scan. Throws `NO_GEOMETRY_MESSAGE` when the
+ * object has no measurable geometry (no meshes, NaN positions, or all
+ * vertices at one point) so the error boundary shows it instead of the
+ * loading overlay hanging forever.
+ */
+export function measureBounds(object: Object3D): Box3 {
+  const box = new Box3().setFromObject(object, true);
+  assertUsableBounds(box);
+  return box;
+}
+
+/** Returns the box size, or throws `NO_GEOMETRY_MESSAGE` if unusable. */
+function assertUsableBounds(box: Box3): Vector3 {
+  if (box.isEmpty()) throw new Error(NO_GEOMETRY_MESSAGE);
+  const size = box.getSize(new Vector3());
+  const finite = [...box.min.toArray(), ...box.max.toArray()].every(
+    Number.isFinite,
+  );
+  if (!finite || size.length() === 0) throw new Error(NO_GEOMETRY_MESSAGE);
+  return size;
+}
+
 /** Direction from target to the default camera position (right, up, front). */
 const VIEW_DIRECTION = new Vector3(0.6, 0.45, 1).normalize();
 
@@ -37,13 +62,9 @@ export function computeCameraFit(
   box: Box3,
   { fovDeg = 50, margin = 1.1 }: FitOptions = {},
 ): CameraFit {
-  if (box.isEmpty()) {
-    throw new Error("computeCameraFit: bounding box is empty");
-  }
+  const size = assertUsableBounds(box);
   const target = box.getCenter(new Vector3());
-  const size = box.getSize(new Vector3());
-  // Guard degenerate (flat/point) meshes so distances stay finite.
-  const radius = Math.max(size.length() / 2, 0.01);
+  const radius = size.length() / 2;
 
   const halfFov = (fovDeg * Math.PI) / 360;
   const distance = (radius / Math.sin(halfFov)) * margin;

@@ -27,7 +27,8 @@ const BoulderViewer = dynamic(
 input (query string, form), validate it with `parseViewerSrc()` first.
 
 Dev harness: `/dev/viewer?src=<url>` (defaults to `/fixtures/demo-boulder.glb`,
-which issue #8 produces; it is **not** committed by this module).
+which issue #8 produces; it is **not** committed by this module). The route
+returns 404 when `NODE_ENV=production`, so it never ships.
 
 ## Files
 
@@ -36,7 +37,7 @@ which issue #8 produces; it is **not** committed by this module).
 | `BoulderViewer.tsx`      | `<Canvas>` (demand frameloop, dpr 1–2, no shadows), lights, ground `Grid`, `OrbitControls`, loading overlay, error boundary, a11y. |
 | `ScanModel.tsx`          | `useGLTF` (Draco + meshopt) → `<primitive>`; fits the camera once mounted.                                                          |
 | `loaders.ts`             | The single place loaders/decoders are configured (`useScanGLTF`, `preloadScanGLTF`, `clearScanGLTF`).                               |
-| `fitCamera.ts`           | Pure `Box3 → CameraFit` math (target, position, min/max distance, polar limit, near/far). Unit tested.                               |
+| `fitCamera.ts`           | Pure `measureBounds()` + `Box3 → CameraFit` math (target, position, min/max distance, polar limit, near/far); throws "scan has no geometry" for empty/degenerate meshes. Unit tested. |
 | `useFitCamera.ts`        | Applies a `CameraFit` to the r3f camera and the controls, then `invalidate()`s.                                                     |
 | `ViewerErrorBoundary.tsx` | Catches 404 / invalid-GLB / WebGL errors; readable message + Retry (clears the loader cache and remounts the canvas).              |
 | `LoadingOverlay.tsx`     | DOM overlay driven by drei `useProgress` (outside the canvas, so it works before WebGL is up).                                       |

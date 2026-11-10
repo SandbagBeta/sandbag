@@ -1,5 +1,9 @@
-import { Box3, Vector3 } from "three";
-import { computeCameraFit } from "./fitCamera";
+import { Box3, BoxGeometry, Group, Mesh, Vector3 } from "three";
+import {
+  computeCameraFit,
+  measureBounds,
+  NO_GEOMETRY_MESSAGE,
+} from "./fitCamera";
 
 // Demo-boulder-shaped box: 2.5 m × 1.8 m × 2 m, ground at y = 0, centered.
 const boulder = new Box3(new Vector3(-1.25, 0, -1), new Vector3(1.25, 1.8, 1));
@@ -48,11 +52,33 @@ describe("computeCameraFit", () => {
     expect(big.maxPolarAngle).toBe(small.maxPolarAngle);
   });
 
-  it("throws on an empty box and tolerates a degenerate flat one", () => {
-    expect(() => computeCameraFit(new Box3())).toThrow(/empty/);
-    const flat = new Box3(new Vector3(0, 0, 0), new Vector3(0, 0, 0));
-    const fit = computeCameraFit(flat);
+  it("still fits a flat (zero-volume) mesh such as a single wall", () => {
+    const wall = new Box3(new Vector3(-1, 0, 0), new Vector3(1, 2, 0));
+    const fit = computeCameraFit(wall);
     expect(Number.isFinite(fit.maxDistance)).toBe(true);
     expect(fit.minDistance).toBeGreaterThan(0);
+  });
+
+  it("throws 'scan has no geometry' for empty, point-sized or NaN bounds", () => {
+    const point = new Box3(new Vector3(1, 1, 1), new Vector3(1, 1, 1));
+    const nan = new Box3(new Vector3(NaN, 0, 0), new Vector3(1, 1, 1));
+    for (const box of [new Box3(), point, nan]) {
+      expect(() => computeCameraFit(box)).toThrow(NO_GEOMETRY_MESSAGE);
+    }
+  });
+});
+
+describe("measureBounds", () => {
+  it("measures a mesh in world space", () => {
+    const mesh = new Mesh(new BoxGeometry(2, 1, 2));
+    mesh.position.set(0, 0.5, 0);
+    const group = new Group().add(mesh);
+    const box = measureBounds(group);
+    expect(box.min.toArray()).toEqual([-1, 0, -1]);
+    expect(box.max.toArray()).toEqual([1, 1, 1]);
+  });
+
+  it("throws 'scan has no geometry' for an object with no meshes", () => {
+    expect(() => measureBounds(new Group())).toThrow(NO_GEOMETRY_MESSAGE);
   });
 });

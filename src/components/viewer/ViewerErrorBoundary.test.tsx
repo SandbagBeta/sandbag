@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describeError, ViewerErrorBoundary } from "./ViewerErrorBoundary";
+import { NO_GEOMETRY_MESSAGE } from "./fitCamera";
 
 function Thrower({ error }: { error: Error | null }) {
   if (error) throw error;
@@ -22,6 +23,15 @@ describe("ViewerErrorBoundary", () => {
       "Couldn't load this scan",
     );
     expect(screen.getByRole("alert")).toHaveTextContent("not found (404)");
+  });
+
+  it("surfaces 'scan has no geometry' from the bounds check", () => {
+    render(
+      <ViewerErrorBoundary>
+        <Thrower error={new Error(NO_GEOMETRY_MESSAGE)} />
+      </ViewerErrorBoundary>,
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent(NO_GEOMETRY_MESSAGE);
   });
 
   it("retry calls onRetry and re-renders the children", () => {

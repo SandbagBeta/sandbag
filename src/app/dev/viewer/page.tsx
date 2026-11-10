@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import {
   DEFAULT_VIEWER_SRC,
   parseViewerSrc,
@@ -18,6 +19,8 @@ export default async function ViewerDevPage({
 }: {
   searchParams: SearchParams;
 }) {
+  // Dev-only harness: never ship it.
+  if (process.env.NODE_ENV === "production") notFound();
   const { src } = await searchParams;
   const parsed = parseViewerSrc(Array.isArray(src) ? src[0] : src);
   return (
