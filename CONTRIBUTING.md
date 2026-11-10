@@ -14,7 +14,7 @@ Grab any app that exports a mesh (Polycam, Scaniverse, RealityScan, Luma…), sc
 2. Read [CLAUDE.md](CLAUDE.md) (yes, even humans — it's the project conventions) and the `.claude/agents/` file for your issue's lane.
 3. Branch `feat/<issue#>-<slug>`, keep the diff focused, include tests.
 4. `pnpm lint && pnpm typecheck && pnpm test && pnpm build` before opening the PR.
-5. Open a PR with `Closes #NN`. CI (`checks`: lint, typecheck, test, build — run `pnpm lint && pnpm typecheck && pnpm test && pnpm build` locally first) must pass; the reviewer agent will comment; a maintainer merges.
+5. Open a PR with `Closes #NN`. CI (`checks`: lint, typecheck, test, build — run `pnpm lint && pnpm typecheck && pnpm test && pnpm build` locally first) must pass, along with CodeQL. A maintainer adds the `claude-review` label to run the reviewer agent, then merges.
 
 AI agents are first-class contributors here — the repo is built for parallel agent development (see [PLAN.md](PLAN.md)). Agent PRs meet the same bar as human PRs.
 
