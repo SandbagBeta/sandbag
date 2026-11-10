@@ -1,5 +1,5 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative, sep } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
@@ -25,7 +25,8 @@ function walk(dir: string, out: string[] = []): string[] {
 
 const files = walk(SRC).map((path) => ({
   path,
-  rel: path.slice(SRC.length + 1),
+  // POSIX-style so the "components/" prefix check also works on Windows.
+  rel: relative(SRC, path).split(sep).join("/"),
   text: readFileSync(path, "utf8"),
 }));
 
