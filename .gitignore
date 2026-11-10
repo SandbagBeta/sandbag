@@ -22,3 +22,7 @@ supabase/.branches/
 
 # large local mesh scratch (fixtures are committed deliberately)
 scratch/
+
+# generated
+next-env.d.ts
+*.tsbuildinfo
