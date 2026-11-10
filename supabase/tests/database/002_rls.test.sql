@@ -4,7 +4,7 @@
 -- published, CQ pending; both are on SP.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(42);
+select plan(46);
 
 insert into auth.users (id, email) values
   ('00000000-0000-0000-0000-00000000000a', 'a@example.invalid'),
@@ -158,6 +158,30 @@ select throws_ok($$insert into storage.objects (bucket_id, name) values
   ('uploads', '00000000-0000-0000-0000-00000000000a/20000000-0000-0000-0000-000000000002/raw/y.glb')$$,
   '42501', null, 'no uploads once the scan is processing');
 reset role;
+
+-- Scan deletes: only before publication, so the cascade can never take other
+-- contributors' climbs with it, and never mid-QC. SP is now `rejected` (taken
+-- down above) and carries B's climb as well as A's.
+insert into public.climbs (id, scan_id, name, proposed_grade, status, created_by) values
+  ('30000000-0000-0000-0000-000000000003', '20000000-0000-0000-0000-000000000001',
+   'B''s line', 'V5', 'published', '00000000-0000-0000-0000-00000000000b');
+insert into public.scans (id, uploader_id, status) values
+  ('20000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-00000000000a', 'failed_qc');
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a"}', true);
+select is_empty($$delete from public.scans
+  where id = '20000000-0000-0000-0000-000000000001' returning id$$,
+  'owner cannot delete a scan once it has been published');
+select is_empty($$delete from public.scans
+  where id = '20000000-0000-0000-0000-000000000002' returning id$$,
+  'owner cannot delete a scan mid-QC');
+select isnt_empty($$delete from public.scans
+  where id = '20000000-0000-0000-0000-000000000004' returning id$$,
+  'owner can withdraw a failed_qc scan');
+reset role;
+select is((select count(*)::int from public.climbs
+  where scan_id = '20000000-0000-0000-0000-000000000001'), 3,
+  'other contributors'' climbs survive the refused delete');
 
 select * from finish();
 rollback;

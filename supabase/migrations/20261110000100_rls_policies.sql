@@ -81,8 +81,15 @@ create policy scans_insert_own on public.scans for insert to authenticated
 create policy scans_update_own_pending on public.scans for update to authenticated
   using (uploader_id = (select auth.uid()) and status in ('uploaded', 'failed_qc', 'pending_review'))
   with check (uploader_id = (select auth.uid()));
-create policy scans_delete_own_unpublished on public.scans for delete to authenticated
-  using (uploader_id = (select auth.uid()) and status <> 'published');
+-- Owners may withdraw a scan only before it is ever published. Deleting a scan
+-- cascades to climbs, holds, paths and grade votes, and FK cascades bypass RLS,
+-- so allowing deletes after publication (e.g. once unpublished) would let the
+-- uploader wipe other contributors' annotations. Climbs can only be created on
+-- published scans, so none exist in these states. `processing` is excluded so
+-- the QC pipeline (#16) never loses its scan mid-run; `rejected` and
+-- `failed_qc` cleanup follows ADR 002's retention policy server-side.
+create policy scans_delete_own_before_publish on public.scans for delete to authenticated
+  using (uploader_id = (select auth.uid()) and status in ('uploaded', 'failed_qc', 'pending_review'));
 
 -- climbs: a published climb is public only while its scan is published, so a
 -- scan takedown hides everything annotated on it.
@@ -105,9 +112,10 @@ create policy climbs_update_own_pending on public.climbs for update to authentic
 create policy climbs_delete_own_pending on public.climbs for delete to authenticated
   using (created_by = (select auth.uid()) and status = 'pending_review');
 
--- holds and paths follow their climb. scan_content_hash agreement with the
--- scan is enforced by annotation versioning (#26), not here. visible when the climb is (the subquery
+-- holds and paths follow their climb: visible when the climb is (the subquery
 -- runs under climbs' own RLS), writable only on the author's pending climb.
+-- scan_content_hash agreement with the scan is enforced by annotation
+-- versioning (#26), not here.
 create policy holds_read on public.holds for select to anon, authenticated
   using (exists (select 1 from public.climbs c where c.id = climb_id));
 create policy holds_write_own_pending on public.holds for all to authenticated
