@@ -11,4 +11,4 @@ Pending (from PLAN.md §5): mesh compression strategy, QC worker runtime, captur
 | # | Title | Status | Issue |
 |---|---|---|---|
 | [001](001-openbeta-api.md) | OpenBeta API: terms, rate limits, queries, cache design | Proposed (spike) | #27 |
-| [002](002-mesh-storage.md) | Mesh storage: Supabase Storage vs Cloudflare R2 | Proposed (spike) | #18 |
+| [002](002-mesh-storage.md) | Mesh storage: Supabase Storage vs Cloudflare R2 | Accepted | #18, #50 |

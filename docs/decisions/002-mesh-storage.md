@@ -1,9 +1,9 @@
 # 002 — Mesh storage: Supabase Storage vs Cloudflare R2
 
-- **Status:** Proposed (spike). Decisions D1–D4 below need the maintainer's sign-off.
+- **Status:** Accepted (2026-11-09). The maintainer decided D2–D4 as recorded below. Follow-up filed as #50.
 - **Date:** 2026-11-09
 - **Lane:** infra
-- **Refs:** #18 (this spike), #2 (Supabase setup + buckets), #16 (QC pipeline), #14 (upload flow). PRD §2, §5.1, §6.1, §7, §8, §9, §12. [ADR 001](001-openbeta-api.md) (location privacy).
+- **Refs:** #18 (this spike), #2 (Supabase setup + buckets), #16 (QC pipeline), #15 (upload flow), #50 (storage adapter + R2). PRD §2, §5.1, §6.1, §7, §8, §9, §12. [ADR 001](001-openbeta-api.md) (location privacy).
 
 ## How to read this document
 
@@ -143,7 +143,7 @@ Cheaper bytes per view also help on any backend: KTX2/Basis textures, meshopt, a
 
 ### 3. Bucket layout and access
 
-#2 creates two Supabase buckets: `uploads` (private, pending scans) and `published` (public read, approved meshes). **The split is right**, because a public bucket is the only access mode that lets a CDN cache freely and keeps open data link-able without auth (PRD §2.1). I recommend these rules on top of it, for #2, #14 and #16 to implement:
+#2 creates two Supabase buckets: `uploads` (private, pending scans) and `published` (public read, approved meshes). **The split is right**, because a public bucket is the only access mode that lets a CDN cache freely and keeps open data link-able without auth (PRD §2.1). I recommend these rules on top of it, for #2, #15 and #16 to implement:
 
 **Object keys** (no area names, slugs, or coordinates in any key, so a key never reveals where a boulder is):
 
@@ -220,7 +220,8 @@ The raw original is **not needed** for completeness in this sense, because nothi
 | `pending_review` | keep | keep | none |
 | `rejected` | delete after 30 days; keep `qc_report` and `reviews` rows | delete with raw | none |
 | `published` | **keep indefinitely**, moved to private `originals` | delete after the copy to `published` | canonical GLB + thumb |
-| Unpublished / takedown | keep private (the maintainer decides whether access takedowns also purge raw, D4) | n/a | deleted immediately + CDN purge |
+| Unpublished (by contributor or reviewer, no access issue) | keep private | n/a | deleted immediately + CDN purge |
+| Access takedown | **deleted immediately** (D4) | n/a | deleted immediately + CDN purge |
 
 **Cost impact** (from §2): keeping raw for published scans adds ~150 MB per boulder. At 1,000 boulders that is 150 GB: about **$1.28/month on Supabase Pro** (above the 100 GB included) or **$2.25/month on R2**. It is negligible on any paid tier and impossible on Supabase Free. R2 Infrequent Access ($0.01/GB) would save about $0.75/month at 1,000 boulders. That isn't worth its retrieval fees and 30-day minimum [V] until the archive is far larger.
 
@@ -233,23 +234,22 @@ The raw original is **not needed** for completeness in this sense, because nothi
 | C. Supabase for uploads (RLS), R2 for `published` + `originals` | Pro needed for >50 MB uploads: $25 / $25 / ~$27. On Free: $0 / $0.09 / $2.25 but 50 MB cap | Supabase default; R2 optional | Egress solved; uploads keep RLS |
 | D. R2 for all mesh objects, Supabase Free for DB/Auth | ~$0 / $0.09 / $2.25 | Supabase default; R2 optional | Cheapest; 200 MB uploads on Free; authorization moves to the signing route |
 
-## Decision (proposed)
+## Decision
 
 **Recommendation: keep Supabase Storage as the default backend and the self-host path; put every storage call behind a storage adapter; serve published meshes from R2 (public bucket + custom domain + cache rule) on the hosted instance before the public launch.**
 
 - **D1. Now (M0–M2):** #2's two-bucket layout on Supabase is accepted, with the key, cache and access rules in §3. Add a private `originals` bucket (or the equivalent prefix). This is a request to #2 and #3, not something this PR does. QC output goes to `uploads/.../derived/`, never `published/`.
-- **D2. Hosted plan for raw uploads (maintainer decides).** On hosted Supabase Free, raw uploads are capped at 50 MB [V]. Choose one:
+- **D2. Hosted raw-upload cap: decided (a).** Hosted Supabase Free caps raw uploads at 50 MB [V], and we accept that cap during development. PRD §6.1 and §9 now say the cap depends on the plan. Revisit at launch: (c) if the project wants to stay near $0/month, (b) if RLS should remain the only upload guard. The options were:
   - (a) Accept a 50 MB raw cap on the hosted instance until launch, and update PRD §9 to say the cap is plan-dependent.
   - (b) Supabase Pro ($25/month).
   - (c) Move `uploads` to R2 as well (option D).
 
-  **My recommendation is (a) during development, then (c) at launch if the project wants to stay at ~$0/month, or (b) if the maintainer prefers keeping RLS as the only upload guard.**
-- **D3. `published` goes to R2 on the hosted instance** when the first of these happens:
+- **D3. Accepted. `published` goes to R2 on the hosted instance** when the first of these happens. The project has no domain yet and will get one later, and a custom domain is a prerequisite (r2.dev is dev-only), so the move can't happen before then. Tracked in #50:
   - storage egress passes 50% of the plan's monthly quota (5 GB on Free, 250 GB on Pro);
   - or the public launch (M5) is scheduled.
 
   At the PRD's own launch target (10 boulders × 1k views = 100 GB/month), Free is exceeded by 10× and Pro is fine. Above ~28 boulders, Pro starts billing overage. Use a public bucket with a custom domain and a cache rule for `.glb`/`.webp`, with no r2.dev, no presigned reads, and immutable content-hash keys.
-- **D4. Retention:** as the §5 table. Raw originals of published scans are kept indefinitely and are never public. Maintainer decides: do access takedowns purge raw too, and are sanitized originals part of the public dataset export (and if so, as a separate tier)?
+- **D4. Retention: decided.** As in the §5 table. Raw originals of published scans are kept indefinitely and are never public. **An access takedown deletes the raw original too**, along with the public objects and the CDN cache, so no copy of a sensitive scan survives. Still open: whether sanitized originals belong in the public dataset export, and if so as a separate tier. Decide this before #33.
 
 ### Self-hosting and the storage adapter
 
@@ -274,12 +274,14 @@ Keys are built only from ids and content hashes. The adapter never receives coor
 
 - PRD §12's risk row is corrected: the pressure is egress on published meshes, not raw storage size (PRD updated in this PR to point here).
 - #2 / #3: add `originals` bucket (or prefix), bucket size/MIME limits, path-prefix RLS on `uploads`, no anon list on `published`. These are requests for those issues, not changes made here.
-- #14: TUS uploads behind the adapter. The hosted cap depends on D2.
+- #15: TUS uploads behind the adapter (#50 Part 1 lands first). The hosted cap is 50 MB during development (D2).
 - #16: the Edge Function does only the HEAD/Range check and enqueue, because of the 2 s CPU / 256 MB limits [V]. Conversion runs in a worker that talks S3. The golden set gains metadata/georeference-stripping cases.
 - Lifecycle module owns object copies/deletes alongside status writes, plus a reconcile job.
 - Dataset export (M5) reads `published` + DB through the formatter. Originals are a separate, maintainer-gated tier.
 
-## Draft follow-up issue (for the maintainer to file, or not)
+## Follow-up issue (filed as #50)
+
+Filed with one addition: the adapter (Part 1) should land before #15 and #16, while the R2 driver and migration (Part 2) wait for the trigger and a custom domain.
 
 > **Title:** Storage adapter + serve published meshes from Cloudflare R2 (optional driver)
 >
@@ -306,9 +308,9 @@ Keys are built only from ids and content hashes. The adapter never receives coor
 
 ## Open questions for the maintainer
 
-1. D2: hosted raw-upload cap during development (50 MB on Free) versus Pro versus R2 uploads.
-2. D3: confirm the trigger (50% of egress quota or M5, whichever first). Does the project already own a domain to put on Cloudflare?
-3. D4: on an access takedown, purge raw originals too, or keep them private? Are sanitized originals part of the public dataset, and on what terms?
+1. ~~D2~~ Decided: 50 MB cap during development.
+2. ~~D3~~ Decided: trigger accepted. The domain will be acquired later.
+3. D4: takedowns purge raw (decided). **Still open:** are sanitized originals part of the public dataset, and on what terms? Decide this before #33.
 4. Is 1k views/boulder/month realistic? The model is linear in it. At 100 views/boulder, Supabase Pro covers ~280 boulders before overage.
 
 ## Sources
