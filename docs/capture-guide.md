@@ -82,14 +82,14 @@ Open the exported file in a viewer (your phone's file preview or any desktop GLB
 
 | QC check | Limit | If it fails |
 |---|---|---|
-| File type and size | Valid GLB/OBJ/PLY, ≤ 200 MB | Re-export in a supported format. Reduce polygon count (not texture size) if too large. Zip is not supported. |
+| File type and size | Valid GLB/OBJ/PLY, ≤ 200 MB | Re-export in a supported format. Reduce polygon count (not texture size) if too large. |
 | Mesh loads, has geometry | ≥ 1 mesh | Re-export. Make sure you export the mesh, not a point cloud or splat. |
 | Triangle count | 10k – 5M | Too few: reprocess at higher detail. Too many: decimate in the app's export options. |
 | Bounding box | 0.3 m – 30 m | Wrong scale. Re-export with metric units, or rescale in your tool. If you scanned more than one boulder, trim to just the one. |
 | Degenerate geometry | Volume > 0 | Usually a failed or partial reconstruction. Rescan with more overlap. |
 | Floaters | < 50% disconnected vertices | Remove floating junk in the app's crop/trim tool. Rescan with the landing cleared and nobody moving through the shot. |
 | Texture present | Required | Re-export with texture enabled. Check that the texture file is included (OBJ needs its `.mtl` and image). |
-| Texture resolution | ≥ 1024 px fails, < 2048 px warns | Export the texture at 2048 px or higher. |
+| Texture resolution | Must be ≥ 1024 px (fails below); warns below 2048 px | Export the texture at 2048 px or higher. |
 
 Common problems that don't fail QC but may fail community review:
 
