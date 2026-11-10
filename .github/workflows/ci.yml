@@ -46,3 +46,24 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+  # Applies every migration to a fresh local Postgres and runs the pgTAP suite
+  # in supabase/tests/ (schema shape, RLS, denied-case access tests).
+  db:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start Postgres and apply migrations
+        run: supabase db start
+
+      - name: Lint schema
+        run: supabase db lint --level warning --fail-on error
+
+      - name: pgTAP tests
+        run: supabase test db

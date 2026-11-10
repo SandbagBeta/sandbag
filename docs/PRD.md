@@ -156,7 +156,7 @@ holds            id, climb_id, scan_content_hash, position vec3, normal vec3,
                  face_index, type: start|hand|foot|finish, seq_order?
 paths            id, climb_id, kind: line|topout|downclimb, points jsonb
 grade_votes      climb_id, user_id, grade, created_at  (unique per user+climb)
-reviews          id, subject_type: scan|climb, subject_id, reviewer_id,
+reviews          id, subject_type: scan|climb|area, subject_id, reviewer_id,
                  verdict: approve|request_changes|reject, reason, created_at
 area_cache       openbeta_area_id, name, path_tokens, ancestors uuid[], is_leaf,
                  total_climbs, organizations jsonb, openbeta_updated_at,
@@ -170,7 +170,7 @@ area_privacy     openbeta_area_id, location_privacy: exact|fuzzed_1km|hidden,
                  reason, set_by, set_at   (SandBag-owned; never overwritten by refresh)
 ```
 
-Row-level security: contributors edit their own pending items; published items immutable except through review; grade votes are per-user. RLS is row-level, so raw coordinates are protected by keeping them in separate tables with no public SELECT policy (or revoked column privileges), never by row policies alone; they are read only server-side through the location-privacy formatter. Cache shape, TTL and privacy rules: [ADR 001](decisions/001-openbeta-api.md).
+Row-level security: contributors edit their own pending items; published items immutable except through review; grade votes are per-user. RLS is row-level, so raw coordinates are protected by keeping them in separate tables with no public SELECT policy (or revoked column privileges), never by row policies alone; they are read only server-side through the location-privacy formatter. Cache shape, TTL and privacy rules: [ADR 001](decisions/001-openbeta-api.md). `subject_type: area` is how a reviewer clears `ancestors_changed_at` (ADR 001 P3). Implemented in `supabase/migrations/20261110000000_schema_v1.sql`.
 
 ## 9. QC pipeline (the "good enough" check)
 
