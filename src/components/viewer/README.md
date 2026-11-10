@@ -28,7 +28,9 @@ input (query string, form), validate it with `parseViewerSrc()` first.
 
 Dev harness: `/dev/viewer?src=<url>` (defaults to `/fixtures/demo-boulder.glb`,
 which issue #8 produces; it is **not** committed by this module). The route
-returns 404 when `NODE_ENV=production`, so it never ships.
+returns 404 on Vercel production and on self-hosted `next start` builds. It
+stays available in `next dev` and on Vercel preview deployments, so PR
+previews can be tested on real phones (see `src/app/dev/devHarness.ts`).
 
 ## Files
 

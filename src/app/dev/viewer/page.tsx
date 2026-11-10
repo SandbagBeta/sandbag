@@ -4,6 +4,7 @@ import {
   DEFAULT_VIEWER_SRC,
   parseViewerSrc,
 } from "@/components/viewer/srcParam";
+import { isDevHarnessEnabled } from "../devHarness";
 import { ViewerClient } from "./ViewerClient";
 
 export const metadata: Metadata = {
@@ -19,8 +20,9 @@ export default async function ViewerDevPage({
 }: {
   searchParams: SearchParams;
 }) {
-  // Dev-only harness: never ship it.
-  if (process.env.NODE_ENV === "production") notFound();
+  // Dev-only harness: 404 on Vercel production and self-hosted builds,
+  // available in dev and on Vercel preview deployments (phone testing).
+  if (!isDevHarnessEnabled()) notFound();
   const { src } = await searchParams;
   const parsed = parseViewerSrc(Array.isArray(src) ? src[0] : src);
   return (
