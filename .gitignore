@@ -1,0 +1,24 @@
+# deps / builds
+node_modules/
+.next/
+out/
+dist/
+coverage/
+
+# env & secrets
+.env
+.env.local
+.env*.local
+
+# supabase local
+supabase/.temp/
+supabase/.branches/
+
+# misc
+.DS_Store
+*.log
+.vercel
+.turbo
+
+# large local mesh scratch (fixtures are committed deliberately)
+scratch/
