@@ -1,16 +1,27 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useThree } from "@react-three/fiber";
 import { Raycaster, Vector2, Vector3, type Camera } from "three";
 import { useStore } from "zustand";
-import type { HoldType } from "@/lib/types";
+import type { MeshSurface } from "@/lib/annotations";
+import type { HoldType, Vec3 } from "@/lib/types";
 import { BoulderViewer, type BoulderViewerProps } from "../BoulderViewer";
+import { ClimbLine } from "../holds/ClimbLine";
 import { HoldMarkers } from "../holds/HoldMarkers";
 import { useScanGLTF } from "../loaders";
 import { AnnotateControls } from "./AnnotateControls";
 import { createEditorStore, type HoldPlacement } from "./editorStore";
+import { buildMeshSurface } from "./meshSurface";
 import { buildFaceOffsets, isClick, pickFromHit } from "./pick";
+import {
+  drawReducer,
+  IDLE,
+  sequenceLine,
+  type DrawKind,
+  type DrawState,
+} from "./pathDraw";
+import { SequencePanel } from "./SequencePanel";
 
 /** Screen-space radius (px) within which a pointer-down grabs a hold. */
 const GRAB_PX = 16;
@@ -40,13 +51,34 @@ export function AnnotateViewer({
   const holds = useStore(store, (s) => s.holds);
   const canUndo = useStore(store, (s) => s.past.length > 0);
   const canRedo = useStore(store, (s) => s.future.length > 0);
+  const paths = useStore(store, (s) => s.paths);
+  const meta = useStore(store, (s) => s.meta);
+  const [draw, drawDispatch] = useReducer(drawReducer, IDLE);
+  const [mesh, setMesh] = useState<MeshSurface | null>(null);
   const [activeType, setActiveType] = useState<HoldType>("hand");
   const [rawSelected, setSelected] = useState<string | null>(null);
   // Undo can remove the selected hold: derive instead of syncing.
   const selectedId = holds.some((h) => h.id === rawSelected)
     ? rawSelected
     : null;
-  const { retype, remove, undo, redo } = store.getState();
+  const { retype, remove, undo, redo, reorder, setMeta, setPath } =
+    store.getState();
+
+  // Enter commits the drawn path, Escape discards it.
+  useEffect(() => {
+    if (!draw.kind) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Enter") {
+        if (draw.kind && draw.points.length >= 2)
+          setPath(draw.kind, draw.points);
+        drawDispatch({ type: "finish" });
+      } else if (e.key === "Escape") drawDispatch({ type: "cancel" });
+      else return;
+      e.preventDefault();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [draw, setPath]);
 
   return (
     <div className="relative h-full w-full">
@@ -61,6 +93,9 @@ export function AnnotateViewer({
             activeType={activeType}
             selectedId={selectedId}
             onSelect={setSelected}
+            draw={draw}
+            onDrawPoint={(point) => drawDispatch({ type: "append", point })}
+            onMesh={setMesh}
           />
         }
       >
@@ -69,6 +104,20 @@ export function AnnotateViewer({
         choose the hold type, Delete removes the selected hold, Control+Z
         undoes.
       </BoulderViewer>
+      <SequencePanel
+        holds={holds}
+        meta={meta}
+        scanContentHash={scanContentHash}
+        mesh={mesh}
+        selectedId={selectedId}
+        draw={draw}
+        hasPath={(k: DrawKind) => paths.some((p) => p.kind === k)}
+        onSelect={setSelected}
+        onReorder={reorder}
+        onName={(name) => setMeta({ name })}
+        onDraw={(kind) => drawDispatch({ type: "start", kind })}
+        onClearPath={(kind) => setPath(kind, [])}
+      />
       <AnnotateControls
         activeType={activeType}
         onTypeChange={setActiveType}
@@ -91,26 +140,52 @@ function AnnotateScene({
   activeType,
   selectedId,
   onSelect,
+  draw,
+  onDrawPoint,
+  onMesh,
 }: {
   src: string;
   store: Store;
   activeType: HoldType;
   selectedId: string | null;
   onSelect: (id: string | null) => void;
+  draw: DrawState;
+  onDrawPoint: (point: Vec3) => void;
+  onMesh: (mesh: MeshSurface) => void;
 }) {
   const { scene: scan } = useScanGLTF(src);
   const offsets = useMemo(() => buildFaceOffsets(scan), [scan]);
   const holds = useStore(store, (s) => s.holds);
+  const paths = useStore(store, (s) => s.paths);
   const gl = useThree((s) => s.gl);
   const camera = useThree((s) => s.camera);
   const controls = useThree((s) => s.controls) as { enabled: boolean } | null;
   const invalidate = useThree((s) => s.invalidate);
   const [drag, setDrag] = useState<Drag | null>(null);
   // Latest props/three state without re-binding the DOM listeners.
-  const live = useRef({ activeType, onSelect, camera, controls });
-  useEffect(() => {
-    live.current = { activeType, onSelect, camera, controls };
+  const live = useRef({
+    activeType,
+    onSelect,
+    camera,
+    controls,
+    draw,
+    onDrawPoint,
   });
+  useEffect(() => {
+    live.current = {
+      activeType,
+      onSelect,
+      camera,
+      controls,
+      draw,
+      onDrawPoint,
+    };
+  });
+  useEffect(() => onMesh(buildMeshSurface(scan)), [scan, onMesh]);
+  const line = useMemo(
+    () => sequenceLine(holds, store.getState().climbId),
+    [holds, store],
+  );
 
   const shown = useMemo(
     () =>
@@ -160,7 +235,7 @@ function AnnotateScene({
       if (e.button !== 0) return;
       const { camera, controls, onSelect } = live.current;
       down = { x: e.clientX, y: e.clientY };
-      const id = grab(e, camera);
+      const id = live.current.draw.kind ? null : grab(e, camera);
       if (!id) return;
       onSelect(id);
       dragging = { id, to: null };
@@ -182,7 +257,10 @@ function AnnotateScene({
         if (dragging.to) store.getState().move(dragging.id, dragging.to);
       } else if (isClick(down, e)) {
         const at = pick(e, camera);
-        onSelect(at ? store.getState().place(at, activeType) : null);
+        const { draw, onDrawPoint } = live.current;
+        if (draw.kind) {
+          if (at) onDrawPoint(at.position);
+        } else onSelect(at ? store.getState().place(at, activeType) : null);
       }
       down = dragging = null;
       setDrag(null);
@@ -200,6 +278,21 @@ function AnnotateScene({
   return (
     <>
       <HoldMarkers holds={shown} selectedClimbId={null} />
+      {line && <ClimbLine path={line} holds={shown} />}
+      {paths.map((p) => (
+        <ClimbLine key={p.id} path={p} holds={shown} />
+      ))}
+      {draw.kind && (
+        <ClimbLine
+          path={{
+            id: "draft",
+            climb_id: store.getState().climbId,
+            kind: draw.kind,
+            points: draw.points,
+          }}
+          holds={shown}
+        />
+      )}
       {selected && (
         <mesh position={selected.position}>
           <sphereGeometry args={[0.05, 16, 12]} />
