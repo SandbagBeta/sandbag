@@ -4,6 +4,7 @@ import { useCallback, useId, useMemo, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import type { Climb, ClimbPath, Hold } from "@/lib/types";
 import { ClimbInfo, ClimbList, parseClimbParam } from "./ClimbPanel";
+import { ViewerLegend } from "./ViewerLegend";
 
 // WebGL only, and keeps three.js out of the initial chunk.
 const ClimbViewer = dynamic(
@@ -58,6 +59,10 @@ export function ClimbExplorer({
     () => holds.filter((h) => h.climb_id === selectedClimbId),
     [holds, selectedClimbId],
   );
+  const climbPaths = useMemo(
+    () => paths.filter((p) => p.climb_id === selectedClimbId),
+    [paths, selectedClimbId],
+  );
 
   return (
     <div className="flex h-dvh flex-col bg-white text-stone-900 md:flex-row dark:bg-stone-950 dark:text-stone-100">
@@ -100,7 +105,8 @@ export function ClimbExplorer({
           selectedClimbId={selectedClimbId}
           onSelect={select}
         />
-        <ClimbInfo climb={climb} holds={climbHolds} />
+        <ClimbInfo climb={climb} holds={climbHolds} paths={climbPaths} />
+        <ViewerLegend />
       </aside>
     </div>
   );
