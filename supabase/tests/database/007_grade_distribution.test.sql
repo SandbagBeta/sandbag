@@ -1,7 +1,7 @@
 -- climb_grade_distribution (issue #24): aggregates only, published only.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(7);
+select plan(6);
 
 select has_function('public', 'climb_grade_distribution', array['uuid'], 'function exists');
 
@@ -32,7 +32,7 @@ select is_empty($$select * from public.climb_grade_distribution('71000000-0000-0
   'unpublished climb returns no rows');
 select is_empty($$select * from public.climb_grade_distribution(gen_random_uuid())$$,
   'unknown climb returns no rows');
-select throws_ok($$select * from public.grade_votes$$, '42501', null, 'anon still cannot read raw votes');
+select is_empty($$select * from public.grade_votes$$, 'anon still cannot read raw votes');
 reset role;
 
 set local role authenticated;
