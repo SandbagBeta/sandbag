@@ -4,6 +4,8 @@ Inputs for the QC golden tests (`src/lib/qc/golden.test.ts`, ADR 003 §7). Every
 
 Each file is at most 1 MB and the set at most 6 MB. Large inputs (1M–5M triangles) are covered by the opt-in benchmark in `src/lib/qc/bench.test.ts`.
 
+ZIP timestamps use fixed local calendar fields (2026-01-01 00:00:00), because ZIP's DOS timestamp has no time zone and fflate serializes local date/time fields. A fixed UTC instant would produce different bytes across machines. The golden tests regenerate all fixtures in separate Node processes under UTC, America/New_York, and Asia/Kathmandu and compare their SHA-256 hashes to the committed files. The two ZIP fixtures were regenerated with this timestamp fix; their mesh and texture contents are unchanged.
+
 | File | Expect | Exercises |
 |---|---|---|
 | `good-polycam-like.glb` | pass | GLB, 20k tris, 2048² JPEG, UV seams (split vertices welded for topology) |
