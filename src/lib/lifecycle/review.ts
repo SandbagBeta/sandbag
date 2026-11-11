@@ -4,14 +4,14 @@ import type {
   Review,
   ReviewSubject,
   ReviewVerdict,
-} from "@/lib/types";
+} from "../types";
+import { applyTransition, assertPublishable } from "./apply";
 import {
-  applyTransition,
-  assertPublishable,
   LifecycleDbError,
   MissingMeshError,
   TransitionConflictError,
-} from "./apply";
+} from "./errors";
+import { insertReview, readOne, undoReview, UUID } from "./internal";
 import { LifecycleError } from "./transitions";
 
 /**
@@ -32,7 +32,6 @@ import { LifecycleError } from "./transitions";
  * effect with no review. True atomicity needs a Postgres function (see PR).
  */
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SUBJECTS: readonly ReviewSubject[] = ["scan", "climb", "area"];
 const VERDICTS: readonly ReviewVerdict[] = [
   "approve",
@@ -59,7 +58,11 @@ export type ReviewRefusal =
   | "not_reviewer"
   | "self_review"
   | "reason_required"
-  | "not_pending";
+  | "not_pending"
+  /** takeDown only: trust_level must be maintainer. */
+  | "not_maintainer"
+  /** takeDown only: the subject must be published. */
+  | "not_published";
 
 export class ReviewNotAllowedError extends LifecycleError {
   constructor(
@@ -95,24 +98,8 @@ export interface ReviewResult {
   areaFlagCleared?: boolean;
 }
 
-function refuse(code: ReviewRefusal, message: string): never {
+export function refuse(code: ReviewRefusal, message: string): never {
   throw new ReviewNotAllowedError(code, message);
-}
-
-async function readOne<T>(
-  db: SupabaseClient,
-  table: string,
-  columns: string,
-  key: string,
-  value: string,
-): Promise<T | null> {
-  const { data, error } = await db
-    .from(table)
-    .select(columns)
-    .eq(key, value)
-    .maybeSingle();
-  if (error) throw new LifecycleDbError(`reading ${table}`, error);
-  return data as T | null;
 }
 
 export async function submitReview(
@@ -198,32 +185,16 @@ export async function submitReview(
   }
 
   // 2. Record the review.
-  const { data: review, error } = await db
-    .from("reviews")
-    .insert({
-      subject_type: subjectType,
-      subject_id: subjectId,
-      reviewer_id: reviewerId,
-      verdict,
-      reason,
-    })
-    .select("*")
-    .single();
-  if (error || !review) throw new LifecycleDbError("writing review", error);
+  const review = await insertReview(db, {
+    subject_type: subjectType,
+    subject_id: subjectId,
+    reviewer_id: reviewerId,
+    verdict,
+    reason,
+  });
 
   // 3. Apply its effect; undo the review row only if the effect surely didn't happen.
-  const undo = async (cause: Error): Promise<never> => {
-    const { error: delError } = await db
-      .from("reviews")
-      .delete()
-      .eq("id", review.id);
-    if (delError) {
-      throw new LifecycleError(
-        `${cause.message} Also failed to remove review ${review.id}, which records an effect that did not happen: ${delError.message}`,
-      );
-    }
-    throw cause;
-  };
+  const undo = (cause: Error) => undoReview(db, review.id, cause);
 
   if (subjectType === "area") {
     if (verdict !== "approve" || !area?.ancestors_changed_at) {

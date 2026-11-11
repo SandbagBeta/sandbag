@@ -1,18 +1,26 @@
-import type { LifecycleStatus } from "@/lib/types";
+import type { LifecycleStatus } from "../types";
 
 /**
  * Scan/climb lifecycle (PRD §8). The single source of truth for which status
  * changes are legal; nothing else may decide that.
  *
  *   scan:  uploaded → processing → failed_qc | pending_review
+ *          failed_qc → processing          (QC re-run by the pipeline, #16)
  *          pending_review → published | rejected
  *   climb: (created at) pending_review → published | rejected
  *
- * Everything not listed is refused, including no-op self-transitions. Where
- * the PRD is silent (retrying a failed_qc scan in place, taking a published
- * item down, reopening a rejected one) the answer is "not allowed" until the
- * owner decides otherwise. `request_changes` is a review verdict, not a
- * transition: the item stays pending_review (see review.ts).
+ * One more edge is deliberately NOT in TRANSITIONS: takedown, published →
+ * rejected for scans and climbs, by a maintainer with a reason (owner
+ * decision on #20). Only `takeDown` (takedown.ts) can make it, so
+ * canTransition / assertTransition / applyTransition / submitReview all
+ * refuse it. See TAKEDOWN.
+ *
+ * Everything else is refused, including no-op self-transitions. `rejected`
+ * is final (owner decision, 2026-11-10): there is no reopen; a new upload or
+ * a new climb starts over. `request_changes` is a review verdict, not a
+ * transition: the item stays pending_review (see review.ts). Contributors
+ * never write status (no user role has a grant on the column), so every edge
+ * here, the QC re-run included, is server-side only.
  */
 export type LifecycleKind = "scan" | "climb";
 
@@ -31,9 +39,10 @@ export const TRANSITIONS: Readonly<Record<LifecycleKind, Readonly<Table>>> = {
   scan: {
     uploaded: ["processing"],
     processing: ["failed_qc", "pending_review"],
-    failed_qc: [],
+    failed_qc: ["processing"],
     pending_review: ["published", "rejected"],
     published: [],
+    // Final. No reopen edge (owner decision, 2026-11-10).
     rejected: [],
   },
   climb: {
@@ -45,6 +54,12 @@ export const TRANSITIONS: Readonly<Record<LifecycleKind, Readonly<Table>>> = {
     rejected: [],
   },
 };
+
+/**
+ * The takedown edge (both kinds). Kept out of TRANSITIONS so general callers
+ * can't use it; only takeDown() writes it.
+ */
+export const TAKEDOWN = { from: "published", to: "rejected" } as const;
 
 /** Status a new row starts in (matches the column defaults in schema v1). */
 export const INITIAL_STATUS: Readonly<Record<LifecycleKind, LifecycleStatus>> =
@@ -68,7 +83,10 @@ export class InvalidTransitionError extends LifecycleError {
       `Invalid ${kind} transition ${from} → ${to}. ` +
         (allowed.length
           ? `From ${from} a ${kind} may only move to: ${allowed.join(", ")}.`
-          : `${from} is not a state a ${kind} can leave.`),
+          : `${from} is not a state a ${kind} can leave.`) +
+        (from === TAKEDOWN.from && to === TAKEDOWN.to
+          ? " Taking down a published item goes through takeDown (maintainers only)."
+          : ""),
     );
   }
 }
