@@ -88,53 +88,57 @@ export default async function BoulderPage({
   const { data, title, description, src } = boulder;
 
   return (
-    <ClimbExplorer
-      src={src}
-      label={`3D scan of ${title}`}
-      climbs={data.climbs}
-      holds={data.holds}
-      paths={data.paths}
-      initialClimbId={Array.isArray(climb) ? climb[0] : climb}
-      header={
-        <header className="space-y-2">
-          <Link
-            href="/"
-            className="text-xs text-stone-600 underline hover:no-underline dark:text-stone-400"
-          >
-            SandBag
-          </Link>
-          <h1 className="text-xl font-bold tracking-tight">{title}</h1>
-          <p className="text-sm text-stone-600 dark:text-stone-400">
-            {description}
-          </p>
-          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs text-stone-600 dark:text-stone-400">
-            {data.scan.capture_app && (
-              <>
-                <dt>Captured with</dt>
-                <dd>{data.scan.capture_app}</dd>
-              </>
-            )}
-            {data.scan.tri_count !== null && (
-              <>
-                <dt>Mesh</dt>
-                <dd>{data.scan.tri_count.toLocaleString("en-US")} triangles</dd>
-              </>
-            )}
-            <dt>License</dt>
-            <dd>
-              <a
-                href="https://creativecommons.org/licenses/by-sa/4.0/"
-                className="underline hover:no-underline"
-              >
-                CC BY-SA 4.0
-              </a>
-            </dd>
-          </dl>
-          <ShareButton title={title} />
-        </header>
-      }
-    >
-      {description} Use the climb list to explore climbs without the 3D view.
-    </ClimbExplorer>
+    <main>
+      <ClimbExplorer
+        src={src}
+        label={`3D scan of ${title}`}
+        climbs={data.climbs}
+        holds={data.holds}
+        paths={data.paths}
+        initialClimbId={Array.isArray(climb) ? climb[0] : climb}
+        header={
+          <header className="space-y-2">
+            <Link
+              href="/"
+              className="text-xs text-stone-600 underline hover:no-underline dark:text-stone-400"
+            >
+              SandBag
+            </Link>
+            <h1 className="text-xl font-bold tracking-tight">{title}</h1>
+            <p className="text-sm text-stone-600 dark:text-stone-400">
+              {description}
+            </p>
+            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs text-stone-600 dark:text-stone-400">
+              {data.scan.capture_app && (
+                <>
+                  <dt>Captured with</dt>
+                  <dd>{data.scan.capture_app}</dd>
+                </>
+              )}
+              {data.scan.tri_count !== null && (
+                <>
+                  <dt>Mesh</dt>
+                  <dd>
+                    {data.scan.tri_count.toLocaleString("en-US")} triangles
+                  </dd>
+                </>
+              )}
+              <dt>License</dt>
+              <dd>
+                <a
+                  href="https://creativecommons.org/licenses/by-sa/4.0/"
+                  className="underline hover:no-underline"
+                >
+                  CC BY-SA 4.0
+                </a>
+              </dd>
+            </dl>
+            <ShareButton title={title} />
+          </header>
+        }
+      >
+        {description} Use the climb list to explore climbs without the 3D view.
+      </ClimbExplorer>
+    </main>
   );
 }
