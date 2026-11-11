@@ -1,6 +1,6 @@
 # 003 — QC pipeline runtime: Edge Function vs worker
 
-- **Status:** Proposed (spike). Waiting for the maintainer to decide D1–D6 below. Implementation of #16 starts after that.
+- **Status:** Accepted (2026-11-10). The maintainer decided every open question; see [Owner decisions](#owner-decisions-2026-11-10). Implementation follows the [Implementation order](#implementation-order).
 - **Date:** 2026-11-10
 - **Lane:** 3d
 - **Refs:** #16 (QC pipeline; this is its spike half), #15 (upload flow, `enqueueQc` hook), #50 (storage adapter). PRD §2, §6.1, §7, §8, §9. [ADR 002](002-mesh-storage.md) (bucket layout, Edge Function limits, raw-file privacy). PLAN.md §5.
@@ -145,61 +145,63 @@ GLB outputs include the 4.3 MB texture unchanged; PLY outputs carry positions on
 | Puppeteer + Chromium (SwiftShader) | No | Possible with a slim Chromium build, near the 250 MB bundle limit; slow cold start | Yes | **Yes** (Chromium binary) | [I] heaviest option; best fidelity |
 | Client-generated, uploaded | n/a | n/a | n/a | None | The reviewer's browser already renders the mesh in the review queue (PRD §9) and could upload a thumbnail on approval. Untrusted input, so only acceptable from reviewers, and nothing exists before approval [I] |
 
-**Recommendation:** pure-JS rasterizer in the worker for v1 (with texture sampling), PNG via `node:zlib`. ADR 002 names `thumb.webp`; WebP needs `sharp` (native but prebuilt and already installed) or a wasm encoder (D5).
+**Decided (O5):** the pure-JS rasterizer renders the pixels in the worker (with texture sampling), and `sharp` encodes them as `thumb.webp`, matching ADR 002. `sharp` is native, but it ships prebuilt binaries and is already installed with `next`, so self-hosters don't compile anything.
 
 ### 5. Trigger and queue design
 
 **Constraints from the code:**
 
 - `enqueueQc` runs inside the contributor's request (`verifyUploadComplete`, session client). It must not do the work in-line, and repeat calls must be no-ops.
-- `applyTransition` is compare-and-set on `status` only. It does not write any other column.
-- The lifecycle allows `processing → failed_qc` and `processing → pending_review`, nothing back to `uploaded`, and nothing out of `failed_qc`.
+- Today `applyTransition` is compare-and-set on `status` only. It doesn't write any other column, so lifecycle PR (b) adds a QC column patch (O4).
+- Today the lifecycle allows `processing → failed_qc` and `processing → pending_review`, nothing back to `uploaded`, and nothing out of `failed_qc`. Lifecycle PR (b) adds `failed_qc → processing` (O3).
 - RLS (`20261110000100_rls_policies.sql`) makes published scan rows public in full, so `qc_report` must never contain location.
 
 **Options:**
 
 | Option | How a job starts | Recovery | Schema change | Notes |
 |---|---|---|---|---|
-| Q1. `qc_jobs` table + direct call + cron sweep | `enqueueQc` inserts `qc_jobs(scan_id)` (`on conflict do nothing`) with the service role, then calls the worker route via `after()` | Supabase Cron every minute calls the worker route through pg_net; it claims expired leases | New table `qc_jobs(scan_id pk → scans, attempts int, lease_until timestamptz, last_error text, pipeline_version text, created_at, updated_at)`, no anon/authenticated grants; a `claim_qc_job()` SQL function (`for update skip locked`, PostgREST can't express it); a cron job + Vault secret | Errors and attempt history stay private, off the public `scans` row |
+| **Q1. `qc_jobs` table + direct call + cron sweep (chosen, O2)** | `enqueueQc` inserts `qc_jobs(scan_id, raw_path)` (`on conflict do nothing`) with the service role, then calls the worker route via `after()` | Supabase Cron every minute calls the worker route through pg_net; it claims due jobs and expired leases | New table `qc_jobs(scan_id pk → scans, raw_path text, attempts int, run_after timestamptz, lease_until timestamptz, last_error text, pipeline_version text, created_at, updated_at)`, no anon/authenticated grants; a `claim_qc_job()` SQL function (`for update skip locked`, PostgREST can't express it); a cron job + Vault secret | Errors and attempt history stay private, off the public `scans` row |
 | Q2. Supabase Queues (pgmq) | `enqueueQc` calls `pgmq.send('qc', {scan_id})` | Visibility timeout re-delivers; `read_ct` counts attempts | Enable `pgmq`, create queue `qc`, keep `pgmq_public` unexposed to anon/authenticated; same cron job | No unique key, so duplicates are possible; idempotency comes from the `uploaded → processing` CAS. Less SQL to write, more platform to learn |
 | Q3. Database Webhook on `scans` | Trigger on `raw_path` set → pg_net POST to the worker | **None documented** [V] → still needs a sweep | Webhook trigger + secret | Duplicates Q1's sweep anyway |
 | Q4. `scans.status` is the queue | `after()` call only | Sweep looks for `uploaded` scans with `raw_path` set and `processing` scans with an old `qc_started_at` | Add `qc_started_at timestamptz`, `qc_attempts int` to `scans` | Smallest change, but job bookkeeping lands on a public row |
 
-**Recommended flow (Q1):**
+**Flow (Q1, decided):**
 
-1. `verifyUploadComplete` → `enqueueQc({scanId, rawPath})`. Server side, with the service role: set `scans.raw_path` if it is null (never from client input), insert the `qc_jobs` row (`on conflict do nothing`), then `after(() => runQc(scanId))`. A second call finds the row and does nothing.
-2. `runQc` (route `POST /api/qc/run`, `runtime = "nodejs"`, `maxDuration = 300`, shared-secret auth, also callable by the sweep): claim the job (lease 6 min, `attempts + 1`). If `scans.status` is `uploaded`, `applyTransition(uploaded → processing)`; a `TransitionConflictError` means another runner has it, so stop. If it is already `processing` (a retry), continue.
-3. Header pass via a Range read: magic bytes, size, triangle count, texture size. Fail fast on anything over budget (§6).
-4. Download, parse, run the checks, build the canonical GLB (recentre, strip metadata), compress, hash, render the thumbnail.
-5. Upload `uploads/{uploader}/{scan}/derived/{content_hash}.glb` and `thumb.png` (deterministic keys, so re-runs overwrite identical bytes; ADR 002 §3). Never write to `published` here.
-6. Write `glb_path`, `content_hash`, `tri_count`, `texture_res`, `qc_report` with `… where id = ? and status = 'processing'`, then `applyTransition(processing → pending_review | failed_qc)`. A crash between the two leaves a `processing` scan with results, which the sweep re-runs harmlessly (same bytes, same hash). Better: let `applyTransition` take a column patch so it is one statement (D4).
+1. `verifyUploadComplete` → `enqueueQc({scanId, rawPath})`. Server side, with the service role: insert the `qc_jobs` row with the verified object key as `raw_path` (`on conflict do nothing`; never from client input), then `after(() => runQc(scanId))`. A second call finds the row and does nothing.
+2. `runQc` (route `POST /api/qc/run`, `runtime = "nodejs"`, `maxDuration = 300`, shared-secret auth, also called by the sweep): claim the job (lease 6 min, `attempts + 1`). If `scans.status` is `uploaded`, `applyTransition(uploaded → processing, patch {raw_path})`. A `TransitionConflictError` means another runner has it, so stop. If the scan is already `processing` (a retry), continue.
+3. Header pass via a Range read: magic bytes, size, triangle count, texture size. Fail at once on a hard limit (§6, §8).
+4. Download, parse, run the checks, build the canonical GLB (recentre, strip location metadata; O10), meshopt-compress (O7), hash, render the thumbnail and encode it as WebP (O5).
+5. Upload `uploads/{uploader}/{scan}/derived/{content_hash}.glb` and `thumb.webp`. The keys are deterministic, so re-runs overwrite identical bytes (ADR 002 §3). Never write to `published` here.
+6. `applyTransition(processing → pending_review | failed_qc, patch {glb_path, content_hash, tri_count, texture_res, qc_report})`: one compare-and-set update for status and results (O4). A crash before it leaves a `processing` scan with nothing written, which the sweep retries.
 7. Mark the job done (or delete it).
 
-**Who writes what:**
+**Who writes what** (all through `applyTransition`'s allowlisted patch, O4):
 
-| Column | Written by | When |
+| Column | Written in | When |
 |---|---|---|
-| `status` | `applyTransition` only | claim (`→ processing`), finish (`→ pending_review` / `failed_qc`) |
-| `raw_path` | `enqueueQc`, service role, from the verified object key | before the job exists |
-| `glb_path`, `content_hash`, `tri_count`, `texture_res` | QC worker | only on pass (left null on `failed_qc`, except `tri_count` when known) |
-| `qc_report` | QC worker | always, pass or fail |
+| `status` | `applyTransition` | claim (`→ processing`), finish (`→ pending_review` / `failed_qc`), maintainer re-run (`failed_qc → processing`) |
+| `raw_path` | patch on `uploaded → processing`, from `qc_jobs.raw_path` (the verified object key) | at claim |
+| `glb_path`, `content_hash`, `tri_count`, `texture_res` | patch on `processing → pending_review` | only on pass. On `failed_qc` they stay null, except `tri_count` when known. `texture_res` stays null for vertex-coloured meshes |
+| `qc_report` | patch on `processing → pending_review` or `→ failed_qc` | always, pass or fail. A re-run overwrites it |
 
-**`qc_report` and location.** Published rows are public, so the report must be built from an allow-list, never by dumping parser output:
+**`qc_report` and location (O10).** Published rows are public, so the report is built from an allow-list, never by dumping parser output. These rules apply to **every** area, including `exact` ones:
 
 - Bounds as **extents only** (`[2.5, 1.8, 1.8]` m), never min/max corners. A georeferenced scan's corners *are* its coordinates (UTM/ECEF offsets).
-- Recentring is reported as a boolean, never as the offset.
+- Georeferenced meshes are always recentred. The report records a boolean, never the offset.
 - No EXIF, no glTF `extras`, no node/material/image names, no `asset.generator`/copyright strings, no original filename. Raw keys already use a fixed stored file name (`keys.ts`).
-- The canonical GLB gets the same treatment: drop `extras`, names and image metadata, re-encode or strip textures so EXIF goes.
+- The canonical GLB gets the same treatment: drop `extras` and names, and re-encode textures so EXIF (including GPS) is gone.
 - A golden fixture enforces this (G5 below), and a unit test checks that no number in the report has an absolute value above ~1,000 [I: a heuristic tripwire, not a proof].
 
 ### 6. Failure modes
 
 | Failure | Handling |
 |---|---|
-| Input over the job budget (> 5M triangles from the header, > 200 MB, or a projected peak memory over budget) | Fail fast in the header pass, **before** parsing: `failed_qc` with "This scan has 6.2M triangles; the limit is 5M. Decimate to under 5M (see capture guide)". Projected peak ≈ 200 MB + 185 MB per 1M triangles for a GLB with a 4K texture, ≈ 80 MB + 150 MB per 1M for PLY [M: fitted to the 1M–5M meshopt runs] |
-| Worker killed (OOM, timeout) mid-job | Nothing is written, so the scan stays `processing` with an expired lease. The sweep retries. After 2 attempts it writes `failed_qc` with "Processing this file ran out of time/memory. Try a smaller export" and the attempt data. Never retry forever, never leave it silently stuck |
-| Transient error (Storage 5xx, DB timeout) | Throw before writing results; the lease expires; the sweep retries (max 3 attempts total) |
-| Bug in the pipeline marks good scans `failed_qc` | No way back today: `failed_qc` has no outgoing transitions. The contributor must upload again as a new scan (D3) |
+| Input over the hard cap (> 5M triangles from the header, or > the plan's byte cap) | **Hard failure at once (O16)**, in the header pass, before downloading the body or parsing: `failed_qc` with "This scan is too large: 6.2M triangles; the limit is 5M. Decimate it to under 5M triangles and upload again." Projected peak memory at the cap ≈ 200 MB + 185 MB per 1M triangles for a GLB with a 4K texture, ≈ 80 MB + 150 MB per 1M for PLY [M: fitted to the 1M–5M meshopt runs], so 5M stays under Hobby's 2 GB |
+| Genuine mesh failure (any hard check in §8: wrong type, corrupt, too few triangles, wrong scale, …) | `failed_qc` **immediately**, no retry (O8). The report carries the actionable message |
+| Infrastructure error (Storage 5xx, DB timeout, network) | Throw before writing results. The job gets `run_after = now() + backoff` (1 min, then 5 min) and the sweep retries, **up to 3 attempts in total** (O8) |
+| Worker killed (OOM, timeout) mid-job | Treated as an infrastructure error: nothing was written, the lease expires, and the sweep retries within the same 3-attempt budget. The header cap makes this rare |
+| Retries exhausted | `processing → failed_qc` with a plain message: "Something went wrong on our side while checking this scan. It isn't a problem with your file; a maintainer has been notified." The error detail goes in `qc_jobs.last_error`, not in the public report (O8) |
+| Bug in the pipeline marks good scans `failed_qc` | A maintainer re-runs QC through the new `failed_qc → processing` transition, triggered server-side only (O3). The re-run resets the job's attempts |
 | Stuck `processing` with no `qc_jobs` row (e.g. a manual change) | The sweep also scans `processing` scans older than 15 min without a live lease and treats them as expired |
 | Lost `after()` call (deploy, crash before it ran) | The sweep picks up `qc_jobs` rows that were never claimed |
 | Hosted Free 50 MB cap (#15, ADR 002 D2) | The upload is refused before QC. QC still enforces its own limits, because self-hosted and paid plans allow 200 MB |
@@ -215,9 +217,9 @@ Every fixture is generated by a deterministic script (as `generate-demo-boulder.
 | # | Fixture | Exercises |
 |---|---|---|
 | G1 | `good-polycam-like.glb`: 20k tris, 2048² JPEG, UV seams | GLB path, weld across seams, texture ≥ 2048 (no warning) |
-| G2 | `good-scaniverse-like.ply`: 20k tris, binary LE, vertex colours, no texture | PLY path, vertex colour kept. "Texture present" must accept vertex colour (D6) |
-| G3 | `good-obj.zip`: OBJ + MTL + 1024² JPEG | Zip + OBJ conversion; 1024 ≤ texture < 2048 passes with a **warning** |
-| G4 | `good-draco.glb`: Draco-compressed input | Compressed-input decoding |
+| G2 | `good-scaniverse-like.ply`: 20k tris, binary LE, vertex colours, no texture | PLY path, vertex colour kept. Vertex colours count as "texture present", and the resolution check is skipped (O6) |
+| G3 | `good-obj.zip`: OBJ + MTL + 1024² JPEG, ~30% floater vertices | Zip + OBJ conversion; passes to review with **two soft warnings** (S1 texture, S2 floaters; O9) |
+| G4 | `good-draco.glb`: Draco-compressed input | Decoding a Draco *input* (the output is still meshopt, O7) |
 | G5 | `good-georeferenced.zip`: OBJ with UTM-sized offsets (e.g. +500,000 / +4,600,000) and a JPEG with EXIF GPS | Passes; canonical GLB recentred, EXIF stripped; `qc_report` has no absolute coordinates (ADR 002 §5) |
 
 **Bad (must fail with the named reason):**
@@ -235,8 +237,28 @@ Two more cover the remaining checks, so every check has a good and a bad case (l
 
 | # | Fixture | Check |
 |---|---|---|
-| B7 | `bad-small-texture.glb`: 512² texture | 4. texture ≥ 1024 px (fail) |
-| B8 | `bad-too-many-tris.ply`: header claims 6M faces, body truncated | 2. upper triangle bound + "too large" fast-fail, before any parse |
+| B7 | `bad-small-texture.glb`: 512² image texture | 4. image texture ≥ 1024 px (H10) |
+| B8 | `bad-too-many-tris.ply`: header claims 6M faces, body truncated | 2. 5M cap: instant "too large, decimate to under 5M" before any parse (H3, O16) |
+
+The soft-warning thresholds in §8 (S3, S4) get unit tests on generated in-memory meshes rather than committed fixtures.
+
+### 8. Hard and soft checks (O9)
+
+A **hard** check fails the scan at once (`failed_qc`, severity `error`). A **soft** check passes the scan to review with severity `warning`, so a reviewer sees it next to the viewer. A scan reaches `pending_review` only when no hard check failed. Hard thresholds are the PRD §9 values. Soft thresholds are this ADR's starting values; change them only in a reviewed PR, never to make a test pass (lane guide).
+
+| Id | Check | Hard: fail when | Soft: warn when |
+|---|---|---|---|
+| H1 | File type | extension and magic bytes disagree, or the format isn't GLB, glTF, PLY or OBJ-in-zip | — |
+| H2 | File size | raw file > plan cap (200 MB; 50 MB on hosted Free) | — |
+| H3 | Too large | header triangle count > 5,000,000 (O16) | — |
+| H4 | Parse | file is corrupt or truncated, or has no triangle primitive | — |
+| H5 | Too few triangles | < 10,000 | — |
+| H6 / S3 | Scale | longest extent < 0.3 m or > 30 m | longest extent 0.3–0.5 m or 20–30 m ("check the export units") |
+| H7 | Volume | enclosed volume < 0.1% of the bounding-box volume (flat or degenerate) | — |
+| H8 / S2 | Floaters | ≥ 50% of vertices outside the largest connected piece | 20–50% |
+| H9 | Colour present | no image texture **and** no vertex colours (O6) | — |
+| H10 / S1 | Texture resolution (image textures only, O6) | longest side < 1024 px | 1024–2047 px |
+| S4 | Mesh quality | — | > 1% degenerate faces, or > 1% non-manifold edges |
 
 ## Options considered
 
@@ -244,37 +266,59 @@ Two more cover the remaining checks, so every check has a good and a bad case (l
 |---|---|---|---|---|
 | A. Everything in a Supabase Edge Function (PRD §9 as written) | **No.** Memory cap reached at ~100k textured tris; CPU at ~1M [M] | $0 | $0 | Ruled out by measurement |
 | B. Split: Edge Function header checks + worker for the rest | Yes | $0 + worker | Edge Function + worker | Two runtimes, Deno + Node, for a < 1 ms check the worker can do itself |
-| **C. Node route in the existing Next.js app** (Vercel Function hosted, `next dev`/`next start` locally) + Postgres job table + Supabase Cron sweep | **Yes**, ~1.1 GB / ~10 s at 5M (cap 2 GB / 300 s on Hobby) | $0 on Hobby (non-commercial); Pro usage-based | **Nothing extra**: same process as the app | One codebase, one runtime, no native deps |
+| **C. Node route in the existing Next.js app (chosen)** (Vercel Function hosted, `next dev`/`next start` locally) + Postgres job table + Supabase Cron sweep | **Yes**, ~1.1 GB / ~10 s at 5M (cap 2 GB / 300 s on Hobby) | $0 on Hobby (non-commercial); Pro usage-based | **Nothing extra**: same process as the app | One codebase, one runtime; only native piece is prebuilt `sharp` for WebP |
 | D. Dedicated worker (Fly.io / Railway) polling the job table | Yes with ≥ 1.5 GB | ~$4–7/month; no real free tier | An extra service to deploy (breaks the 10-minute self-host) | Keep as the escape hatch if C hits limits |
 
 ## Decision
 
-**Recommendation: C.** Run the whole QC job in Node inside the Next.js app, as a server-only module (`src/lib/qc/`) behind a secret-protected route handler. Start jobs from `enqueueQc` via a `qc_jobs` row plus `after()`, and recover them with a Supabase Cron sweep. Don't use an Edge Function for v1.
+**Decision: C (O1).** Run the whole QC job in Node inside the Next.js app, as a server-only module (`src/lib/qc/`) behind a secret-protected route handler with `maxDuration = 300`. Start jobs from `enqueueQc` via a `qc_jobs` row plus `after()`, and recover them with a Supabase Cron sweep (O2). No Edge Function in v1.
+
+**Hosting (O15):** the main deployment is non-commercial, so Vercel Hobby is allowed. Commercial use of a deployment would require Vercel Pro [V].
 
 Budgets for the implementation:
 
-- **Hard input limits:** ≤ 5M triangles (PRD), ≤ 200 MB raw (≤ 50 MB on hosted Free), checked from the header before parsing.
+- **Hard input limits:** ≤ 5M triangles (PRD, O16), ≤ 200 MB raw (≤ 50 MB on hosted Free), checked from the header before downloading or parsing.
 - **Memory:** target ≤ 1.5 GB peak at 5M triangles (measured 1.1 GB), below Vercel Hobby's 2 GB. Log `peakRssMB` and per-step timings into the job row (not the public report).
 - **Time:** `maxDuration = 300`. Expect ≤ 30 s at 5M on a cloud vCPU [I]. The sweep lease is 6 min.
-- **Self-hosting:** no new service, no native dependency, no paid tier. On a fresh clone, `pnpm dev` runs QC through the `after()` fast path. The cron sweep is a recovery path, and self-hosters can trigger it manually with a `pnpm qc:sweep` script [I: making pg_net reach the dev server from Docker needs a `host.docker.internal` URL].
+- **Self-hosting:** no new service, nothing to compile (only `sharp`'s prebuilt binary, already installed with `next`), no paid tier. On a fresh clone, `pnpm dev` runs QC through the `after()` fast path. The cron sweep is a recovery path, and self-hosters can trigger it manually with a `pnpm qc:sweep` script [I: making pg_net reach the dev server from Docker needs a `host.docker.internal` URL].
 
 ## Consequences
 
-- PRD §7 and §9 say "Edge Function". If this is accepted, they change to "Node worker route in the app" (follow-up docs edit in the implementation PR). PLAN.md §5's open question is answered by this ADR.
-- #16 implementation PRs, in order (each within ~400 lines): (1) schema: `qc_jobs` + claim function + cron (backend lane, own PR); (2) `src/lib/qc/` pure checks + golden fixtures; (3) conversion/compression/thumbnail; (4) route, `enqueueQc` wiring, sweep.
-- `@gltf-transform/*` and `meshoptimizer` move from devDependencies to dependencies; add a pure-JS unzip; add `draco3dgltf` only if Draco wins the compression decision or to decode Draco inputs (wasm, no native build).
-- `qc_report` gets a typed shape in `src/lib/types.ts` (`QcCheckResult = {id, pass, severity, message, data}`), replacing `Record<string, unknown>`.
-- The 5M-triangle limit gives a 32.8 MB meshopt GLB (texture included) [M], which is heavy for phones and for the egress budget in ADR 002. Decimation and texture targets belong in the compression ADR, and this pipeline is where they will run.
+- PRD §7 and §9 say "Edge Function" and "Draco-compress". The #16 implementation PR changes them to "Node worker route in the app" and "meshopt", and adds the hard/soft split from §8. PLAN.md §5's open question is answered by this ADR.
+- `@gltf-transform/*` and `meshoptimizer` move from devDependencies to dependencies. Add a pure-JS unzip. Add `draco3dgltf` (wasm, no native build) only to *decode* Draco-compressed inputs; the output is never Draco (O7). `sharp` becomes a direct dependency for WebP thumbnails (O5).
+- `qc_report` gets a typed shape in `src/lib/types.ts` (`QcCheckResult = {id, pass, severity: "error" | "warning" | "info", message, data}` plus pipeline metadata), replacing `Record<string, unknown>`.
+- The 5M-triangle limit gives a 32.8 MB meshopt GLB (texture included) [M], which is heavy for phones and for the egress budget in ADR 002. The codec is now decided (meshopt), but decimation and texture targets still belong in the compression ADR, and this pipeline is where they will run.
 
-## Open questions for the maintainer
+## Owner decisions (2026-11-10)
 
-- **D1. Runtime:** accept C (Node route in the Next.js app, no Edge Function)? Note that Vercel **Hobby is non-commercial only** [V]. Alternatives are B or D.
-- **D2. Queue:** Q1 (`qc_jobs` table, recommended), Q2 (Supabase Queues) or Q4 (two columns on `scans`)? Each needs a backend-lane migration first. The cron sweep needs pg_cron + pg_net + a Vault secret in every option.
-- **D3. Lifecycle:** should a maintainer be able to re-run QC on a `failed_qc` scan (new `failed_qc → processing` transition) for when the pipeline itself was wrong? Today the only way out is a new upload. Also, should a `processing` scan that exhausts its retries go to `failed_qc` (this ADR's assumption) or to a separate state?
-- **D4. Lifecycle API:** allow `applyTransition` to write a small, typed patch of QC columns in the same compare-and-set statement (one atomic update), instead of a separate write before the transition?
-- **D5. Thumbnail format:** PNG from pure JS (no native deps), or WebP via `sharp` (native but prebuilt, already installed through `next`)? ADR 002 assumed `thumb.webp`.
-- **D6. "Texture: present":** does a vertex-coloured PLY (Scaniverse's usual export) count as having a texture, or must PRD §9 check 4 become "texture or vertex colours"?
-- **D7. Compression:** meshopt was 2–3× faster to encode here; Draco gave ~5× smaller geometry raw and ~2× smaller after brotli. This ADR doesn't decide it, but the compression ADR now has numbers to start from.
+The maintainer answered every open question from the spike. The rest of this ADR has been updated to match.
+
+| # | Question | Decision |
+|---|---|---|
+| O1 | Runtime | **Option C.** QC runs in Node inside the Next.js app: server-only `src/lib/qc/` behind a secret-protected route, `maxDuration = 300`. No Edge Function in v1 |
+| O2 | Queue | **Dedicated `qc_jobs` table** + `claim_qc_job()` (`for update skip locked`) + a scheduled sweep for lost or stuck jobs (Q1) |
+| O3 | Re-runs | **Add `failed_qc → processing`**, triggered server-side only (maintainer action, never the contributor's client) |
+| O4 | Atomic results | **`applyTransition` takes a typed, allowlisted patch** of QC columns (`glb_path`, `content_hash`, `tri_count`, `texture_res`, `qc_report`, and `raw_path` where needed), applied in the same compare-and-set update as the status |
+| O5 | Thumbnails | **WebP via `sharp`** (prebuilt, already installed with Next). The pure-JS rasterizer renders and `sharp` encodes |
+| O6 | Vertex colours | **Count as "texture present".** The texture-resolution check applies only to image textures |
+| O7 | Compression | **meshopt**, not Draco. Recorded here and in the decisions index; the compression ADR inherits it and covers decimation and texture targets |
+| O8 | Auto-retry | **Up to 3 attempts with backoff, for infrastructure errors only.** Genuine mesh failures fail immediately. Exhausted retries → `failed_qc` with a plain "something went wrong on our side" message |
+| O9 | Soft checks | **Borderline results pass to review as warnings**; hard failures (wrong type, corrupt, too few triangles, wrong scale, …) auto-fail. Thresholds in §8 |
+| O10 | Location stripping | **Always**, for every area including `exact`: strip EXIF GPS, glTF `extras`, node/image/file names; recentre georeferenced meshes; `qc_report` bounds as extents only |
+| O11 | Takedown | **Maintainer-only `published → rejected` with a recorded reason.** A lifecycle change, not part of #16; listed as a dependency (lifecycle PR (b)) |
+| O12 | Reopen rejected | **No.** `rejected` stays final |
+| O13 | Golden fixtures | **Commit to `fixtures/qc/`** (≤ 1 MB each, ~6 MB total) with a deterministic generator (§7) |
+| O14 | Spike scripts | **Keep `scripts/spikes/qc-bench/`** in the repo |
+| O15 | Hosting | The main deployment is non-commercial, so **Vercel Hobby is allowed**. Commercial use would require Pro |
+| O16 | Size cap | **Hard cap 5M triangles read from the header**, with an instant "too large, decimate to under 5M" failure |
+
+## Implementation order
+
+Each step is its own PR, within ~400 lines where possible, and lands before the next one starts.
+
+1. **(a) Backend schema PR** (lane:backend): the `qc_jobs` table (§5 Q1 columns, no anon/authenticated grants), the `claim_qc_job()` function (`for update skip locked`, honours `run_after` and expired leases), and the Supabase Cron + pg_net sweep with its Vault secret.
+2. **(b) Backend lifecycle PR** (lane:backend): add `failed_qc → processing` (server-side only, O3); add maintainer-only `published → rejected` with a recorded reason (O11; `rejected` stays final, O12); give `applyTransition` the typed, allowlisted QC column patch (O4); add the `QcReport` / `QcCheckResult` types to `src/lib/types.ts`.
+3. **(c) #16 implementation** (lane:3d), on top of (a) and (b): `src/lib/qc/` checks with the §8 thresholds, the golden fixtures and generator in `fixtures/qc/`, conversion, meshopt compression, location stripping, the thumbnail (rasterizer + `sharp` WebP), the route, the `enqueueQc` wiring, retry/backoff, and the PRD §7/§9 doc updates. Split it into several PRs if it passes the size target.
 
 ## Reproducing
 
