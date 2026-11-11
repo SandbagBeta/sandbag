@@ -1,6 +1,6 @@
 # Per-boulder export format (schema_version 1)
 
-`GET /api/scans/:id/export` returns a store-only zip for one published scan:
+`GET /api/scans/:id/export` (linked as "Download open data" on each boulder page) returns a store-only zip for one published scan:
 
 | File | Contents |
 |---|---|
