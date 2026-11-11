@@ -37,7 +37,7 @@ export function countQcWarnings(report: QcReport | null): number {
   );
 }
 
-async function handles(db: SupabaseClient, ids: (string | null)[]) {
+export async function handles(db: SupabaseClient, ids: (string | null)[]) {
   const uniq = [...new Set(ids.filter((i): i is string => !!i))];
   if (!uniq.length) return new Map<string, string>();
   const { data, error } = await db

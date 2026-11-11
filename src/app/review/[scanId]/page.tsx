@@ -81,7 +81,7 @@ export default async function ReviewScanPage({
         )}
       </section>
 
-      <ReviewForm scanId={scan.id} checklist={CHECKLIST} />
+      <ReviewForm subjectId={scan.id} checklist={CHECKLIST} />
     </main>
   );
 }
