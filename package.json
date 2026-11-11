@@ -41,7 +41,8 @@
     "react-dom": "19.3.1",
     "server-only": "0.0.1",
     "three": "0.187.0",
-    "tus-js-client": "4.3.1"
+    "tus-js-client": "4.3.1",
+    "zustand": "5.1.0"
   },
   "devDependencies": {
     "@gltf-transform/functions": "4.5.1",
