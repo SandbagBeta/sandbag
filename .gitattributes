@@ -1,0 +1,3 @@
+# QC golden fixtures are compared byte-for-byte (src/lib/qc/golden.test.ts):
+# never convert line endings, even in the ASCII PLY.
+fixtures/qc/** binary
