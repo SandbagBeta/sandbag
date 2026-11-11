@@ -67,6 +67,8 @@ export interface Climb {
   proposed_grade: string;
   /** First-ascent info, free text. */
   fa_info?: string | null;
+  /** Set by a DB trigger when the scan mesh is replaced; holds must be re-placed (#26). Null when current. */
+  annotations_stale_at?: string | null;
   status: ClimbStatus;
   /** Profile id of the contributor who created the climb; null once their account is deleted. */
   created_by: string | null;

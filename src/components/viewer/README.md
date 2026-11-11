@@ -111,3 +111,13 @@ in this section.
   heavy scans if needed.
 - Camera limits scale with the mesh bounding sphere, so meshes of any size
   frame correctly; `maxPolarAngle` keeps the camera above ground.
+
+## Hold placement (`annotate/`, issue #21)
+
+`/dev/annotate` runs the desktop hold editor on the demo fixture. `AnnotateEditor`
+falls back to the read-only `ClimbExplorer` below `md` or on `pointer: coarse`.
+Click (at most 4 px of travel) places a hold, drag moves it (one undo step on
+release), keys 1-4 pick the type (sticky; also retypes the selected hold),
+Delete/Backspace removes, Ctrl+Z / Ctrl+Shift+Z undo/redo. `<BoulderViewer bvh>`
+wraps the scan in drei `<Bvh firstHitOnly>`. Holds live in client state only;
+saving is a later PR.
