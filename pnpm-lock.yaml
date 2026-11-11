@@ -8,6 +8,12 @@ importers:
 
   .:
     dependencies:
+      '@gltf-transform/core':
+        specifier: 4.5.1
+        version: 4.5.1
+      '@gltf-transform/extensions':
+        specifier: 4.5.1
+        version: 4.5.1
       '@react-three/drei':
         specifier: 10.7.9
         version: 10.7.9(@react-three/fiber@9.8.2(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(three@0.187.0))(@types/react@19.3.0)(@types/three@0.187.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(three@0.187.0)
@@ -20,6 +26,15 @@ importers:
       '@supabase/supabase-js':
         specifier: 2.119.0
         version: 2.119.0
+      draco3dgltf:
+        specifier: 1.5.9
+        version: 1.5.9
+      fflate:
+        specifier: 0.8.3
+        version: 0.8.3
+      meshoptimizer:
+        specifier: 1.3.0
+        version: 1.3.0
       next:
         specifier: 16.4.6
         version: 16.4.6(@babel/core@7.29.13)(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -39,12 +54,6 @@ importers:
         specifier: 4.3.1
         version: 4.3.1
     devDependencies:
-      '@gltf-transform/core':
-        specifier: 4.5.1
-        version: 4.5.1
-      '@gltf-transform/extensions':
-        specifier: 4.5.1
-        version: 4.5.1
       '@gltf-transform/functions':
         specifier: 4.5.1
         version: 4.5.1(@types/node@26.6.6)
@@ -81,12 +90,12 @@ importers:
       eslint-config-prettier:
         specifier: 10.1.8
         version: 10.1.8(eslint@10.14.0(jiti@2.7.0))
+      jpeg-js:
+        specifier: 0.4.4
+        version: 0.4.4
       jsdom:
         specifier: 31.0.0
         version: 31.0.0
-      meshoptimizer:
-        specifier: 1.3.0
-        version: 1.3.0
       prettier:
         specifier: 3.9.10
         version: 3.9.10
@@ -1496,6 +1505,9 @@ packages:
   draco3d@1.5.9:
     resolution: {integrity: sha512-MqC0eAfW5gPATGY3GABIyFWpHwdDGAyewTdek5R/e+mhI9ZDUMKb2mTDkTMUW0+Vm7an+ThEMUop3+svS72Uug==}
 
+  draco3dgltf@1.5.9:
+    resolution: {integrity: sha512-nIRZumqUwjqVYAdtt8q0F3FZc5qo2rCPTBH2hHhfSvHSPVJazzaepEHFdAZv4wrQKk5CkaclWGHhpyJ4eUdcJQ==}
+
   dunder-proto@1.0.1:
     resolution: {integrity: sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==}
     engines: {node: '>= 0.4'}
@@ -2037,6 +2049,9 @@ packages:
   jiti@2.7.0:
     resolution: {integrity: sha512-AC/7JofJvZGrrneWNaEnJeOLUx+JlGt7tNa0wZiRPT4MY1wmfKjt2+6O2p2uz2+skll8OZZmJMNqeke7kKbNgQ==}
     hasBin: true
+
+  jpeg-js@0.4.4:
+    resolution: {integrity: sha512-WZzeDOEtTOBK4Mdsar0IqEU5sMr3vSV2RqkAIzUEV2BHnUfKGyswWFPFwK5EeDo93K3FohSHbLAjj0s1Wzd+dg==}
 
   js-base64@3.9.6:
     resolution: {integrity: sha512-LjkzbLtU6Lx6fjXMYGEACEB7rdtqZtxkBe9aS1ZpDNUyWgUivw3yBEIhQ37OVygJYRt+C+9e9fVT8PpFzH2Hww==}
@@ -4307,6 +4322,8 @@ snapshots:
 
   draco3d@1.5.9: {}
 
+  draco3dgltf@1.5.9: {}
+
   dunder-proto@1.0.1:
     dependencies:
       call-bind-apply-helpers: 1.0.2
@@ -5022,6 +5039,8 @@ snapshots:
       - '@types/react'
 
   jiti@2.7.0: {}
+
+  jpeg-js@0.4.4: {}
 
   js-base64@3.9.6: {}
 

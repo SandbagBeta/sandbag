@@ -70,9 +70,17 @@ info panel. The dev page uses it for the demo fixture: `/dev/viewer?climb=<id>`.
   Other climbs’ holds are dimmed (toward gray, 70 % scale) rather than hidden,
   so they stay clickable; clicking a hold selects its climb (drags > 4 px are
   ignored).
-- **Line:** only the selected climb’s `kind: "line"` path (topout/downclimb are
-  #11), lifted 1 cm along the nearest hold normal. A faint depth-ignoring pass
-  under the solid pass keeps segments that chord through the rock readable.
+- **Paths:** only the selected climb’s, lifted 1 cm along the nearest hold
+  normal. A faint depth-ignoring pass under the solid pass keeps segments that
+  chord through the rock readable.
+- **Topout / downclimb (#11):** dashed lines (`PATH_STYLE` in `holdStyle.ts`):
+  topout = vermillion long dashes, downclimb = white short dashes, line =
+  solid yellow. Pattern is the non-color cue. Each gets a text label at its
+  arc-length midpoint (drei `Html`, `aria-hidden`). Their points are lifted
+  only within 30 cm of a hold, so a downclimb on the far side never borrows a
+  wrong-facing normal.
+- **Legend:** `climbs/ViewerLegend` (DOM) keys all hold types and path kinds;
+  `ClimbInfo` lists which paths the selected climb has, as text.
 - **Without WebGL:** the climb list and info panel are plain buttons and text
   and work without the canvas.
 
