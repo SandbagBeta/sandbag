@@ -143,6 +143,18 @@ describe("ClimbExplorer", () => {
     // `hidden` applies below md only; md:block keeps desktop unchanged.
     expect(panel).toHaveClass("hidden", "md:block");
   });
+
+  it("reserves the viewer's space itself, so nothing shifts when WebGL loads", () => {
+    renderExplorer();
+    // The slot is rendered by the explorer (present in server HTML), and the
+    // client-only viewer only fills it.
+    const slot = screen.getByTestId("viewer-slot");
+    expect(slot).toContainElement(screen.getByTestId("viewer"));
+    expect(slot).toHaveClass("h-[60dvh]", "shrink-0", "md:h-full");
+    fireEvent.click(screen.getByRole("button", { name: "Hide details" }));
+    expect(slot).toHaveClass("flex-1");
+    expect(slot).not.toHaveClass("h-[60dvh]");
+  });
 });
 
 describe("parseClimbParam", () => {

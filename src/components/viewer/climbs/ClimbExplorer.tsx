@@ -61,17 +61,26 @@ export function ClimbExplorer({
 
   return (
     <div className="flex h-dvh flex-col bg-white text-stone-900 md:flex-row dark:bg-stone-950 dark:text-stone-100">
-      <ClimbViewer
-        src={src}
-        label={label}
+      {/* The viewer is client-only (next/dynamic, ssr: false), so this box
+          is what the server renders. It reserves the viewer's space up front;
+          sizing the lazy component instead let the panel paint at the top and
+          then jump down when WebGL mounted (Lighthouse CLS 0.6 on mobile). */}
+      <div
+        data-testid="viewer-slot"
         className={`w-full md:h-full md:flex-1 ${panelOpen ? "h-[60dvh] shrink-0" : "min-h-0 flex-1"}`}
-        holds={holds}
-        paths={paths}
-        selectedClimbId={selectedClimbId}
-        onSelectClimb={select}
       >
-        {children}
-      </ClimbViewer>
+        <ClimbViewer
+          src={src}
+          label={label}
+          className="h-full w-full"
+          holds={holds}
+          paths={paths}
+          selectedClimbId={selectedClimbId}
+          onSelectClimb={select}
+        >
+          {children}
+        </ClimbViewer>
+      </div>
       <button
         type="button"
         aria-expanded={panelOpen}
