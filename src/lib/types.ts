@@ -89,6 +89,11 @@ export interface Scan {
   openbeta_area_id: string | null;
   openbeta_climb_id: string | null;
   status: ScanStatus;
+  /**
+   * When the scan last entered `processing`; null in every other status. Set
+   * by a database trigger, never written by the app.
+   */
+  processing_started_at: string | null;
   /** Storage keys (ADR 002). Never contain names, slugs or coordinates. */
   raw_path: string | null;
   glb_path: string | null;
