@@ -14,3 +14,7 @@ project
 
 # Recorded OpenBeta API responses, kept byte-for-byte as served
 src/lib/openbeta/__fixtures__
+
+# Vendored Draco decoder copied from three (scripts/copy-draco.mjs)
+public/draco
+.claude/worktrees
