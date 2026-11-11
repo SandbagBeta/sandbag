@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { siteUrl } from "@/lib/siteUrl";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: siteUrl(),
   title: "SandBag — open 3D boulder visualizer",
   description:
     "Scan boulders, upload the renders, annotate holds and lines in 3D. Open code (AGPL-3.0), open data (CC BY-SA 4.0).",
