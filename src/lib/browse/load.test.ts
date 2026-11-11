@@ -3,6 +3,7 @@ import {
   BrowseLoadError,
   loadAreaPage,
   loadBrowseIndex,
+  loadFeatured,
   sortGrades,
   thumbPathFor,
 } from "./load";
@@ -190,5 +191,12 @@ describe("helpers", () => {
       "V10",
       "5.10a",
     ]);
+  });
+});
+
+describe("loadFeatured", () => {
+  it("returns at most `limit` published scans", async () => {
+    const { db } = fakeDb(tables);
+    expect(await loadFeatured(db, 1)).toHaveLength(1);
   });
 });
