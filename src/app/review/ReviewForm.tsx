@@ -5,7 +5,8 @@ import { useActionState } from "react";
 import { submitReviewAction, type ReviewFormState } from "./actions";
 
 export interface ReviewFormProps {
-  scanId: string;
+  subjectId: string;
+  subjectType?: "scan" | "climb";
   checklist: readonly { id: string; label: string }[];
 }
 
@@ -15,7 +16,11 @@ const VERDICTS = [
   ["reject", "Reject"],
 ] as const;
 
-export function ReviewForm({ scanId, checklist }: ReviewFormProps) {
+export function ReviewForm({
+  subjectId,
+  subjectType = "scan",
+  checklist,
+}: ReviewFormProps) {
   const [state, action, pending] = useActionState<ReviewFormState, FormData>(
     submitReviewAction,
     null,
@@ -24,7 +29,8 @@ export function ReviewForm({ scanId, checklist }: ReviewFormProps) {
 
   return (
     <form action={action} className="flex flex-col gap-5">
-      <input type="hidden" name="scanId" value={scanId} />
+      <input type="hidden" name="subjectId" value={subjectId} />
+      <input type="hidden" name="subjectType" value={subjectType} />
       <fieldset className="flex flex-col gap-2">
         <legend className="font-semibold">
           Checklist (required to approve)

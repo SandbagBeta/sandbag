@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { loadPendingClimbs } from "@/lib/review/climbQueue";
 import { canReviewInUi, loadPendingScans } from "@/lib/review/queue";
 import { Forbidden, getReviewer } from "./session";
 
@@ -11,14 +12,18 @@ export const metadata: Metadata = {
 export default async function ReviewQueuePage() {
   const { supabase, trust } = await getReviewer("/review");
   if (!canReviewInUi(trust)) return <Forbidden />;
-  const scans = await loadPendingScans(supabase);
+  const [scans, climbs] = await Promise.all([
+    loadPendingScans(supabase),
+    loadPendingClimbs(supabase),
+  ]);
 
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-6 px-6 py-16">
       <h1 className="text-3xl font-bold tracking-tight">Review queue</h1>
+      <h2 className="text-xl font-semibold">Scans</h2>
       {scans.length === 0 ? (
         <p className="text-stone-600 dark:text-stone-400">
-          Nothing is waiting for review.
+          No scans are waiting.
         </p>
       ) : (
         <ul className="flex flex-col gap-3">
@@ -40,6 +45,31 @@ export default async function ReviewQueuePage() {
                   {s.qc_warnings
                     ? `${s.qc_warnings} QC warning${s.qc_warnings === 1 ? "" : "s"}`
                     : "QC clean"}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+      <h2 className="text-xl font-semibold">Climbs</h2>
+      {climbs.length === 0 ? (
+        <p className="text-stone-600 dark:text-stone-400">
+          No climbs are waiting.
+        </p>
+      ) : (
+        <ul className="flex flex-col gap-3">
+          {climbs.map((c) => (
+            <li key={c.id}>
+              <Link
+                href={`/review/climb/${c.id}`}
+                className="flex flex-col gap-1 rounded border border-stone-300 p-4 hover:bg-stone-100 dark:border-stone-700 dark:hover:bg-stone-800"
+              >
+                <span className="font-semibold">
+                  {c.name} ({c.proposed_grade})
+                </span>
+                <span className="text-sm text-stone-600 dark:text-stone-400">
+                  By {c.author_handle ?? "a deleted account"} · Proposed{" "}
+                  {new Date(c.created_at).toISOString().slice(0, 10)}
                 </span>
               </Link>
             </li>

@@ -34,7 +34,8 @@ export async function submitReviewAction(
       submit: (input) => submitReview(createServiceClient(), input),
     },
     {
-      scanId: String(formData.get("scanId") ?? ""),
+      subjectType: formData.get("subjectType") === "climb" ? "climb" : "scan",
+      subjectId: String(formData.get("subjectId") ?? ""),
       verdict: formData.get("verdict"),
       reason: formData.get("reason"),
       checked: formData.getAll("checked").map(String),
