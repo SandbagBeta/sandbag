@@ -43,6 +43,14 @@ export default function Home() {
           sandbag (v.): to rate a climb easier than it actually is. We keep the
           receipts.
         </p>
+        <p>
+          <a
+            href="/areas"
+            className="inline-block rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700 focus-visible:outline-2 focus-visible:outline-offset-2 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-stone-300"
+          >
+            Browse boulders
+          </a>
+        </p>
       </header>
 
       <ol className="grid gap-4 sm:grid-cols-2">
