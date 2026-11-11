@@ -1,4 +1,4 @@
-import type { HoldType } from "@/lib/types";
+import type { HoldType, PathKind } from "@/lib/types";
 
 /** 3D marker geometry per hold type (see `createMarkerGeometry`). */
 export type MarkerShape = "ring" | "disc" | "tile" | "cone";
@@ -34,3 +34,26 @@ export const DIM_SCALE = 0.7;
 
 /** The selected climb's line. Yellow is unused by markers and reads on rock. */
 export const CLIMB_LINE_COLOR = "#f0e442";
+
+export interface PathStyle {
+  label: string;
+  color: string;
+  /** World-space dash pattern (m); null = solid. Pattern is the non-color cue. */
+  dash: { size: number; gap: number } | null;
+}
+
+export const PATH_KINDS: readonly PathKind[] = ["line", "topout", "downclimb"];
+
+export const PATH_STYLE: Record<PathKind, PathStyle> = {
+  line: { label: "Line", color: CLIMB_LINE_COLOR, dash: null },
+  topout: {
+    label: "Topout",
+    color: "#d55e00",
+    dash: { size: 0.06, gap: 0.04 },
+  },
+  downclimb: {
+    label: "Downclimb",
+    color: "#ffffff",
+    dash: { size: 0.02, gap: 0.03 },
+  },
+};
