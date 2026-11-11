@@ -98,12 +98,25 @@ export default async function BoulderPage({
         initialClimbId={Array.isArray(climb) ? climb[0] : climb}
         header={
           <header className="space-y-2">
-            <Link
-              href="/"
-              className="text-xs text-stone-600 underline hover:no-underline dark:text-stone-400"
+            <nav
+              aria-label="Breadcrumb"
+              className="flex gap-1 text-xs text-stone-600 dark:text-stone-400"
             >
-              SandBag
-            </Link>
+              <Link href="/areas" className="underline hover:no-underline">
+                Areas
+              </Link>
+              {boulder.area && data.scan.openbeta_area_id && (
+                <>
+                  <span aria-hidden>›</span>
+                  <Link
+                    href={`/area/${data.scan.openbeta_area_id}`}
+                    className="underline hover:no-underline"
+                  >
+                    {boulder.area}
+                  </Link>
+                </>
+              )}
+            </nav>
             <h1 className="text-xl font-bold tracking-tight">{title}</h1>
             <p className="text-sm text-stone-600 dark:text-stone-400">
               {description}
