@@ -11,6 +11,7 @@ import {
 import { getArea } from "@/lib/openbeta";
 import { getPublicSupabaseEnv, isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
+import { ExportLink } from "./ExportLink";
 import { ShareButton } from "./ShareButton";
 
 type Params = Promise<{ id: string }>;
@@ -146,7 +147,10 @@ export default async function BoulderPage({
                 </a>
               </dd>
             </dl>
-            <ShareButton title={title} />
+            <div className="flex flex-wrap items-center gap-2">
+              <ShareButton title={title} />
+              <ExportLink scanId={data.scan.id} />
+            </div>
           </header>
         }
       >
