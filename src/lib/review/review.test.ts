@@ -4,7 +4,7 @@ import { decideReview } from "./decide";
 import { CHECKLIST, canReviewInUi, countQcWarnings } from "./queue";
 
 const ALL = CHECKLIST.map((c) => c.id);
-const base = { scanId: "s", verdict: "approve", reason: "", checked: ALL };
+const base = { subjectId: "s", verdict: "approve", reason: "", checked: ALL };
 
 function deps(trust: "maintainer" | "reviewer" | "contributor" | null) {
   const submit = vi.fn().mockResolvedValue({});

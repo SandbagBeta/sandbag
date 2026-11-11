@@ -6,10 +6,13 @@ import {
   type ReviewInput,
 } from "@/lib/lifecycle";
 import type { ReviewVerdict, TrustLevel } from "@/lib/types";
+import { CLIMB_CHECKLIST } from "./climbQueue";
 import { CHECKLIST, canReviewInUi } from "./queue";
 
 export interface DecideInput {
-  scanId: string;
+  /** Defaults to "scan". */
+  subjectType?: "scan" | "climb";
+  subjectId: string;
   verdict: unknown;
   reason: unknown;
   /** Checklist item ids the reviewer ticked. */
@@ -36,7 +39,7 @@ const VERDICTS: readonly ReviewVerdict[] = [
 ];
 const DONE: Record<ReviewVerdict, string> = {
   approve: "Approved and published.",
-  request_changes: "Changes requested. The scan stays in the queue.",
+  request_changes: "Changes requested. It stays in the queue.",
   reject: "Rejected.",
 };
 
@@ -46,7 +49,7 @@ export async function decideReview(
   input: DecideInput,
 ): Promise<DecideResult> {
   if (!canReviewInUi(deps.trustLevel)) {
-    return { ok: false, error: "403: only maintainers can review scans." };
+    return { ok: false, error: "403: only maintainers can review." };
   }
   const verdict = input.verdict as ReviewVerdict;
   if (!VERDICTS.includes(verdict)) {
@@ -56,17 +59,19 @@ export async function decideReview(
   if (verdict !== "approve" && !reason) {
     return { ok: false, error: "Give the contributor a reason." };
   }
+  const subjectType = input.subjectType ?? "scan";
+  const checklist = subjectType === "climb" ? CLIMB_CHECKLIST : CHECKLIST;
   if (
     verdict === "approve" &&
-    !CHECKLIST.every((c) => input.checked.includes(c.id))
+    !checklist.every((c) => input.checked.includes(c.id))
   ) {
     return { ok: false, error: "Tick every checklist item before approving." };
   }
   try {
     await deps.submit({
       reviewerId: deps.reviewerId,
-      subjectType: "scan",
-      subjectId: input.scanId,
+      subjectType,
+      subjectId: input.subjectId,
       verdict,
       reason: reason || null,
     });
