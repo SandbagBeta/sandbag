@@ -9,6 +9,10 @@
     "node": ">=24"
   },
   "scripts": {
+    "copy-draco": "node scripts/copy-draco.mjs",
+    "postinstall": "node scripts/copy-draco.mjs",
+    "predev": "node scripts/copy-draco.mjs",
+    "prebuild": "node scripts/copy-draco.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
