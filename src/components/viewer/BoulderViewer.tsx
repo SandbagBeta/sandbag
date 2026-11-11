@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useRef, useState, type ReactNode } from "react";
 import { Canvas } from "@react-three/fiber";
-import { Grid, OrbitControls } from "@react-three/drei";
+import { Bvh, Grid, OrbitControls } from "@react-three/drei";
 import type { OrbitControlsRef } from "./useFitCamera";
 import { ScanModel } from "./ScanModel";
 import { ViewerErrorBoundary } from "./ViewerErrorBoundary";
@@ -23,6 +23,8 @@ export interface BoulderViewerProps {
    * the model (e.g. hold markers). Imperative updates must `invalidate()`.
    */
   scene?: ReactNode;
+  /** Build a BVH over the scan so per-pointer-move raycasts stay cheap (annotation). */
+  bvh?: boolean;
 }
 
 /**
@@ -35,6 +37,7 @@ export function BoulderViewer({
   className = "",
   children,
   scene,
+  bvh = false,
 }: BoulderViewerProps) {
   const controlsRef = useRef<OrbitControlsRef | null>(null);
   const [fit, setFit] = useState<CameraFit | null>(null);
@@ -65,7 +68,13 @@ export function BoulderViewer({
           <directionalLight position={[4, 6, 3]} intensity={1.6} />
           <directionalLight position={[-3, 2, -4]} intensity={0.4} />
           <Suspense fallback={null}>
-            <ScanModel src={src} controlsRef={controlsRef} onFit={setFit} />
+            {bvh ? (
+              <Bvh firstHitOnly>
+                <ScanModel src={src} controlsRef={controlsRef} onFit={setFit} />
+              </Bvh>
+            ) : (
+              <ScanModel src={src} controlsRef={controlsRef} onFit={setFit} />
+            )}
             {scene}
           </Suspense>
           {fit && (

@@ -1,3 +1,20 @@
+import { BoulderCards } from "@/components/browse/BoulderCards";
+import { loadFeatured, type BoulderCard } from "@/lib/browse/load";
+import { getPublicSupabaseEnv, isSupabaseConfigured } from "@/lib/supabase/env";
+import { createClient } from "@/lib/supabase/server";
+
+// Featured boulders come from the database per request.
+export const dynamic = "force-dynamic";
+
+async function featured(): Promise<BoulderCard[]> {
+  if (!isSupabaseConfigured()) return [];
+  try {
+    return await loadFeatured(await createClient());
+  } catch {
+    return []; // The pitch must render even if the database is down.
+  }
+}
+
 const steps = [
   [
     "📱",
@@ -18,7 +35,8 @@ const steps = [
   ],
 ] as const;
 
-export default function Home() {
+export default async function Home() {
+  const boulders = await featured();
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-12 px-6 py-20">
       <header className="flex flex-col gap-4">
@@ -67,6 +85,51 @@ export default function Home() {
           </li>
         ))}
       </ol>
+
+      {boulders.length > 0 && (
+        <section aria-labelledby="featured-heading" className="space-y-3">
+          <h2 id="featured-heading" className="text-lg font-semibold">
+            Featured boulders
+          </h2>
+          <BoulderCards
+            boulders={boulders}
+            supabaseUrl={getPublicSupabaseEnv().url}
+          />
+        </section>
+      )}
+
+      <section
+        aria-labelledby="values-heading"
+        className="space-y-2 text-sm text-stone-600 dark:text-stone-400"
+      >
+        <h2 id="values-heading" className="text-lg font-semibold text-inherit">
+          Open by design
+        </h2>
+        <p>
+          Code is AGPL-3.0 and contributed data is CC BY-SA 4.0, with a full
+          export for every boulder. Areas flagged for access concerns never show
+          a location.
+        </p>
+      </section>
+
+      <section
+        aria-labelledby="contribute-heading"
+        className="space-y-3 rounded-xl border border-stone-200 p-5 dark:border-stone-800"
+      >
+        <h2 id="contribute-heading" className="text-lg font-semibold">
+          Contribute a boulder
+        </h2>
+        <p className="text-sm text-stone-600 dark:text-stone-400">
+          Got a scan? Upload it, attach it to its OpenBeta climb and help the
+          community annotate it.
+        </p>
+        <a
+          href="/upload"
+          className="inline-block rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700 focus-visible:outline-2 focus-visible:outline-offset-2 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-stone-300"
+        >
+          Upload a scan
+        </a>
+      </section>
 
       <footer className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-stone-500">
         <a

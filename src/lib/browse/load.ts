@@ -142,6 +142,15 @@ function directCounts(scans: ScanRow[]): Map<string, number> {
   return counts;
 }
 
+/** Newest published scans, for the landing page (#36). Same filters as browse. */
+export async function loadFeatured(
+  db: SupabaseClient,
+  limit = 3,
+): Promise<BoulderCard[]> {
+  const scans = await publishedScans(db);
+  return cards(db, scans.slice(0, limit));
+}
+
 export async function loadBrowseIndex(
   db: SupabaseClient,
 ): Promise<BrowseIndex> {
