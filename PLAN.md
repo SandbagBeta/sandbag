@@ -96,6 +96,6 @@ Merge discipline: squash-merge, `main` protected (PRs only, CI required), no age
 ## 5. Open questions (tracked as issues)
 
 - Supabase Storage vs Cloudflare R2 for mesh files at scale (#18) — proposed in [ADR 002](docs/decisions/002-mesh-storage.md); pending maintainer sign-off.
-- Edge Function limits for mesh conversion — may need a small worker (Fly.io/Railway) if >150s or >256MB (#16 spike).
+- Edge Function limits for mesh conversion — may need a small worker (Fly.io/Railway) if >150s or >256MB (#16 spike). Spike done: [ADR 003](docs/decisions/003-qc-pipeline-runtime.md) measured that the full pipeline does not fit an Edge Function and proposes a Node route in the Next.js app; pending maintainer sign-off.
 - OpenBeta API: rate limits/ToS for caching; reach out to their community early (#27 spike). Spike done: [ADR 001](docs/decisions/001-openbeta-api.md) (CC0 data, no published limits/ToS; questions for the OpenBeta community still open).
 - In-app guided capture (v2): browser photogrammetry feasibility spike (#38).
