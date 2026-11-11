@@ -96,11 +96,54 @@ export interface Scan {
   content_hash: string | null;
   tri_count: number | null;
   texture_res: number | null;
-  qc_report: Record<string, unknown> | null;
+  qc_report: QcReport | null;
   capture_app: string | null;
   captured_at: string | null;
   license: "CC-BY-SA-4.0";
   created_at: string;
+}
+
+/**
+ * QC check outcome (ADR 003). `error` checks that fail send the scan to
+ * `failed_qc`; failing `warning`/`info` checks still pass to review.
+ */
+export type QcSeverity = "error" | "warning" | "info";
+
+export interface QcCheckResult {
+  /** Stable check id, e.g. "tri_count". */
+  id: string;
+  pass: boolean;
+  severity: QcSeverity;
+  /** Human-readable, shown to the contributor. */
+  message: string;
+  /**
+   * Scalar measurements only (counts, ratios, sizes in m or px). No strings,
+   * so no file/node/image names or EXIF can ride along.
+   */
+  data?: Readonly<Record<string, number | boolean>>;
+}
+
+/** Size of the mesh's bounding box in metres. Extents only, never corners. */
+export interface QcExtents {
+  width: number;
+  height: number;
+  depth: number;
+}
+
+/**
+ * `scans.qc_report` (ADR 003 §5). Published scan rows are public in full, so
+ * this is an allow-list: it deliberately has no fields for min/max corners,
+ * coordinates or offsets, EXIF, file names, or node/material/image names.
+ * The lifecycle module refuses reports with any other key.
+ */
+export interface QcReport {
+  /** Version of the QC pipeline (and its pinned toolchain) that produced this. */
+  pipeline_version: string;
+  checks: QcCheckResult[];
+  /** Bounding-box extents of the canonical mesh, when it could be measured. */
+  extents_m?: QcExtents | null;
+  /** Whether the canonical GLB was recentred. Never the offset itself. */
+  recentred?: boolean;
 }
 
 export interface GradeVote {
