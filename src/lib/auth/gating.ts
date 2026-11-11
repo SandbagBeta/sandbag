@@ -6,7 +6,11 @@
  * The proxy redirect is a UX convenience, not the security boundary: gated
  * pages must still check the user server-side, and RLS guards the data.
  */
-export const GATED_PATH_PREFIXES: readonly string[] = ["/account", "/upload"];
+export const GATED_PATH_PREFIXES: readonly string[] = [
+  "/account",
+  "/upload",
+  "/review",
+];
 
 export const SIGN_IN_PATH = "/sign-in";
 
