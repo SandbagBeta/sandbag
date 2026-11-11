@@ -111,6 +111,38 @@ describe("ClimbExplorer", () => {
     renderExplorer("not-a-climb");
     expect(screen.getByText(/Select a climb/)).toBeInTheDocument();
   });
+
+  it("renders a header at the top of the panel", () => {
+    render(
+      <ClimbExplorer
+        src={demoBoulder.scan.public_url}
+        label="demo"
+        climbs={demoBoulder.climbs}
+        holds={demoBoulder.holds}
+        paths={demoBoulder.paths}
+        header={<h1>Split Rock</h1>}
+      />,
+    );
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Split Rock" }),
+    ).toBeInTheDocument();
+  });
+
+  it("lets phones collapse the panel, keeping the toggle state accessible", () => {
+    renderExplorer();
+    const toggle = screen.getByRole("button", { name: "Hide details" });
+    const panel = document.getElementById(
+      toggle.getAttribute("aria-controls") ?? "",
+    );
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(panel).not.toHaveClass("hidden");
+    fireEvent.click(toggle);
+    expect(
+      screen.getByRole("button", { name: "Show details" }),
+    ).toHaveAttribute("aria-expanded", "false");
+    // `hidden` applies below md only; md:block keeps desktop unchanged.
+    expect(panel).toHaveClass("hidden", "md:block");
+  });
 });
 
 describe("parseClimbParam", () => {
