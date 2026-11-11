@@ -73,8 +73,8 @@ select throws_ok(
   $$insert into public.reviews (subject_type, subject_id, reviewer_id, verdict, reason)
     values ('scan', gen_random_uuid(), '00000000-0000-0000-0000-0000000000a1', 'reject', '  ')$$,
   '23514', null, 'a rejection needs a reason');
-insert into public.scans (id, uploader_id)
-values ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000a1');
+insert into public.scans (id, uploader_id, content_hash)
+values ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000a1', repeat('a', 64));
 insert into public.climbs (id, scan_id, name, proposed_grade, created_by)
 values ('00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-0000000000b1',
         'Test', 'V0', '00000000-0000-0000-0000-0000000000a1');
