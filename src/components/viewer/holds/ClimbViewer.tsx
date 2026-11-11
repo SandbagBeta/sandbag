@@ -19,7 +19,8 @@ export interface ClimbViewerProps {
 }
 
 /**
- * `BoulderViewer` plus hold markers and the selected climb's line. Lazy-load
+ * `BoulderViewer` plus hold markers and the selected climb's paths (line,
+ * topout, downclimb). Lazy-load
  * this module (`next/dynamic`, `ssr: false`) so three.js stays out of the
  * page's initial chunk.
  */
@@ -30,8 +31,9 @@ export function ClimbViewer({
   onSelectClimb,
   ...viewer
 }: ClimbViewerProps) {
-  const line = paths.find(
-    (p) => p.climb_id === selectedClimbId && p.kind === "line",
+  const climbPaths = useMemo(
+    () => paths.filter((p) => p.climb_id === selectedClimbId),
+    [paths, selectedClimbId],
   );
   const lineHolds = useMemo(
     () => holds.filter((h) => h.climb_id === selectedClimbId),
@@ -47,7 +49,9 @@ export function ClimbViewer({
             selectedClimbId={selectedClimbId}
             onSelectClimb={onSelectClimb}
           />
-          {line && <ClimbLine key={line.id} path={line} holds={lineHolds} />}
+          {climbPaths.map((p) => (
+            <ClimbLine key={p.id} path={p} holds={lineHolds} />
+          ))}
         </>
       }
     />

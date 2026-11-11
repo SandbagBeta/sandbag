@@ -1,6 +1,11 @@
-import type { Climb, Hold } from "@/lib/types";
+import type { Climb, ClimbPath, Hold } from "@/lib/types";
 import { countHoldsByType } from "../holds/holdMath";
-import { HOLD_STYLE, HOLD_TYPES } from "../holds/holdStyle";
+import {
+  HOLD_STYLE,
+  HOLD_TYPES,
+  PATH_KINDS,
+  PATH_STYLE,
+} from "../holds/holdStyle";
 
 /** `?climb=` value → a known climb id, or null. */
 export function parseClimbParam(
@@ -64,9 +69,11 @@ export interface ClimbInfoProps {
   climb: Climb | null;
   /** The selected climb's holds. */
   holds: Hold[];
+  /** The selected climb's paths. */
+  paths?: ClimbPath[];
 }
 
-export function ClimbInfo({ climb, holds }: ClimbInfoProps) {
+export function ClimbInfo({ climb, holds, paths = [] }: ClimbInfoProps) {
   if (!climb) {
     return (
       <p
@@ -103,6 +110,12 @@ export function ClimbInfo({ climb, holds }: ClimbInfoProps) {
           </li>
         ))}
       </ul>
+      <p className="mt-2 text-sm">
+        Marked:{" "}
+        {PATH_KINDS.filter((k) => paths.some((p) => p.kind === k))
+          .map((k) => PATH_STYLE[k].label.toLowerCase())
+          .join(", ") || "no paths yet"}
+      </p>
     </section>
   );
 }
