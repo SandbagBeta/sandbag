@@ -63,3 +63,11 @@ Update the app's env var at the same time. Requests made in between get 401 and 
 ## Notifications
 
 Migration `20261112000000_notifications.sql` (issue #19). `public.notifications (id, user_id, review_id, created_at, read_at)`. An `after insert` trigger on `reviews` (`private.notify_review_author`, security definer) inserts one row for the author of the reviewed scan (`uploader_id`) or climb (`created_by`), for every verdict. Areas and anonymized authors get none. Users can `select` their own rows and update only `read_at`; nobody inserts directly. The verdict and reason are not copied: join `review_id` to `reviews`, which `reviews_read` already lets the author see. The trigger does not write any `status`.
+
+## Scan status history and retries
+
+Migration `20261112000100_scan_status_history.sql` (issue #17).
+
+- `scan_status_events (id, scan_id, from_status, to_status, created_at)`. An `after insert or update of status` trigger on `scans` (`private.record_scan_status`, security definer) writes one row per creation (`from_status` null) and per status change, whichever code path made it. The trigger only records; status still changes only through `src/lib/lifecycle`. Existing scans get one backfilled row. The uploader and reviewers can `select`; nobody can write. Published scans are public but their history is not.
+- `scans.retry_of` references the failed or rejected scan a new upload replaces (`on delete set null`, never itself). Server-side only: `authenticated` has no column grant.
+- `scans_qc_report_has_checks`: `qc_report` is null or has a `checks` array. The full shape (`id`, `pass`, `severity`, `message`, scalar `data`) is enforced by `assertQcReport` in the lifecycle module; the constraint is the backstop. QC failure reasons for the contributor are the failing `checks` entries.
