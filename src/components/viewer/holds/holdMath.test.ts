@@ -9,8 +9,15 @@ import {
   normalToQuaternion,
   offsetAlongNormal,
   offsetPathPoints,
+  pathMidpoint,
 } from "./holdMath";
-import { DIMMED_COLOR, HOLD_STYLE, HOLD_TYPES } from "./holdStyle";
+import {
+  DIMMED_COLOR,
+  HOLD_STYLE,
+  HOLD_TYPES,
+  PATH_KINDS,
+  PATH_STYLE,
+} from "./holdStyle";
 
 const hold = (over: Partial<Hold>): Hold => ({
   id: "h",
@@ -112,6 +119,62 @@ describe("offsetPathPoints", () => {
   it("returns points unchanged without holds", () => {
     const pts: Vec3[] = [[1, 1, 1]];
     expect(offsetPathPoints(pts, [])).toBe(pts);
+  });
+  it("leaves points beyond maxDist from every hold alone", () => {
+    const holds = [hold({ position: [0, 0, 0], normal: [0, 0, 1] })];
+    expect(
+      offsetPathPoints(
+        [
+          [0, 0.1, 0],
+          [0, 5, 0],
+        ],
+        holds,
+        0.01,
+        0.3,
+      ),
+    ).toEqual([
+      [0, 0.1, 0.01],
+      [0, 5, 0],
+    ]);
+  });
+});
+
+describe("pathMidpoint", () => {
+  it("is halfway along the length, not the middle vertex", () => {
+    expect(
+      pathMidpoint([
+        [0, 0, 0],
+        [1, 0, 0],
+        [1, 3, 0],
+      ]),
+    ).toEqual([1, 1, 0]);
+  });
+  it("handles degenerate input", () => {
+    expect(pathMidpoint([])).toBeNull();
+    expect(pathMidpoint([[2, 2, 2]])).toEqual([2, 2, 2]);
+    expect(
+      pathMidpoint([
+        [1, 1, 1],
+        [1, 1, 1],
+      ]),
+    ).toEqual([1, 1, 1]);
+  });
+});
+
+describe("path styles", () => {
+  it("gives each kind a unique color and dash pattern; only the line is solid", () => {
+    const styles = PATH_KINDS.map((k) => PATH_STYLE[k]);
+    expect(new Set(styles.map((s) => s.color)).size).toBe(3);
+    expect(new Set(styles.map((s) => JSON.stringify(s.dash))).size).toBe(3);
+    expect(PATH_STYLE.line.dash).toBeNull();
+    const holdColors = HOLD_TYPES.map((t) => HOLD_STYLE[t].color);
+    for (const s of styles) expect(holdColors).not.toContain(s.color);
+  });
+  it("fixture gives every climb a line, a topout and a downclimb", () => {
+    for (const c of demoBoulder.climbs) {
+      const kinds = pathsForClimb(c.id).map((p) => p.kind);
+      expect([...kinds].sort()).toEqual([...PATH_KINDS].sort());
+    }
   });
 });
 

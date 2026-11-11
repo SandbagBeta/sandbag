@@ -157,6 +157,45 @@ describe("ClimbExplorer", () => {
   });
 });
 
+describe("legend and path summary", () => {
+  it("keys every hold type and path kind", () => {
+    renderExplorer();
+    const legend = screen.getByRole("region", { name: "Legend" });
+    for (const name of [
+      "Start hold",
+      "Hand hold",
+      "Foot hold",
+      "Finish hold",
+      "Line",
+      "Topout",
+      "Downclimb",
+    ]) {
+      expect(within(legend).getByText(name)).toBeInTheDocument();
+    }
+  });
+
+  it("lists the selected climb's marked paths as text", () => {
+    renderExplorer(arete.id);
+    expect(
+      screen.getByRole("region", { name: /Demo Arete/ }),
+    ).toHaveTextContent("Marked: line, topout, downclimb");
+  });
+
+  it("says when a climb has no paths", () => {
+    render(
+      <ClimbExplorer
+        src={demoBoulder.scan.public_url}
+        label="demo"
+        climbs={demoBoulder.climbs}
+        holds={demoBoulder.holds}
+        paths={[]}
+        initialClimbId={arete.id}
+      />,
+    );
+    expect(screen.getByText("Marked: no paths yet")).toBeInTheDocument();
+  });
+});
+
 describe("parseClimbParam", () => {
   it("accepts only known ids", () => {
     expect(parseClimbParam(slab.id, demoBoulder.climbs)).toBe(slab.id);
