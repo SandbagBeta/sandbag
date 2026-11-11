@@ -14,6 +14,8 @@ Logic lives in `src/lib/grades/` (`consensus.ts`, `vScale.ts`), unit-tested:
 - Consensus = mode; ties go to the grade nearest the median, then the lower grade. Needs >= 3 votes (`MIN_VOTES_FOR_CONSENSUS`).
 - Badge shows only when consensus is harder than the proposed grade.
 
-## Not wired yet
+## Wiring
 
-Persistence is blocked on backend: RLS lets a user upsert only their own `grade_votes` row (`grade_votes_own`), but other users' votes are private, so the distribution needs an aggregate (SECURITY DEFINER function or view) that does not exist. There is also no climb page to mount the panel on.
+- Page: `src/app/climb/[id]` (published climbs only; linked from the boulder page climb panel).
+- Distribution: RPC `climb_grade_distribution` via `loadDistribution` (`src/lib/grades/votes.ts`; `rowsToDistribution` maps rows to `Distribution`).
+- Votes: server action `castGradeVote` upserts the caller's single `grade_votes` row (RLS: own row, published climbs only). Signed-out users get the read-only view plus a sign-in link.

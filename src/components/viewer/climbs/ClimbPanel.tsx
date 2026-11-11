@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Climb, ClimbPath, Hold } from "@/lib/types";
 import { countHoldsByType } from "../holds/holdMath";
 import {
@@ -99,6 +100,14 @@ export function ClimbInfo({ climb, holds, paths = [] }: ClimbInfoProps) {
           FA: {climb.fa_info}
         </p>
       )}
+      <p className="mt-2 text-sm">
+        <Link
+          href={`/climb/${climb.id}`}
+          className="underline hover:no-underline"
+        >
+          Grade votes
+        </Link>
+      </p>
       <h3 className="mt-3 text-sm font-semibold">Holds ({holds.length})</h3>
       <ul className="mt-1 grid grid-cols-2 gap-1 text-sm">
         {HOLD_TYPES.map((t) => (
