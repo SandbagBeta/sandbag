@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -178,6 +179,40 @@ describe("golden set: coverage and privacy", () => {
 });
 
 describe("golden set: fixtures match the generator", () => {
+  it.each(["UTC", "America/New_York", "Asia/Kathmandu"])(
+    "regenerates byte-identical files in %s",
+    (tz) => {
+      const generator = new URL(
+        "../../../scripts/generate-qc-fixtures.mjs",
+        import.meta.url,
+      ).href;
+      const script = `
+        import { createHash } from 'node:crypto';
+        const { generateQcFixtures } = await import(${JSON.stringify(generator)});
+        const fixtures = await generateQcFixtures();
+        console.log(JSON.stringify(Object.fromEntries(
+          Object.entries(fixtures).map(([name, bytes]) =>
+            [name, createHash('sha256').update(bytes).digest('hex')])
+        )));
+      `;
+      const hashes = JSON.parse(
+        execFileSync(
+          process.execPath,
+          ["--input-type=module", "-e", script, "timezone-check"],
+          {
+            env: { ...process.env, TZ: tz },
+            encoding: "utf8",
+            timeout: 60_000,
+          },
+        ),
+      ) as Record<string, string>;
+      for (const [name, hash] of Object.entries(hashes)) {
+        expect(sha(read(name)), `${tz}: ${name}`).toBe(hash);
+      }
+    },
+    60_000,
+  );
+
   it("regenerates byte-identical files", async () => {
     const { generateQcFixtures } =
       await import("../../../scripts/generate-qc-fixtures.mjs");

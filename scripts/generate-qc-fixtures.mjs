@@ -15,7 +15,9 @@ import jpeg from "jpeg-js";
 import { generateBoulder } from "./lib/boulder-geometry.mjs";
 
 const OUT_DIR = new URL("../fixtures/qc/", import.meta.url);
-const ZIP_MTIME = new Date(Date.UTC(2026, 0, 1));
+// ZIP stores local calendar fields, not a UTC instant. Keep those fields fixed
+// so fflate writes the same DOS timestamp in every host time zone.
+const ZIP_MTIME = new Date(2026, 0, 1);
 const RES = 41; // 12·41² = 20,172 triangles, just above the 10k minimum
 
 // ---------------------------------------------------------------------------
