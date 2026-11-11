@@ -89,11 +89,11 @@ info panel. The dev page uses it for the demo fixture: `/dev/viewer?climb=<id>`.
 - **meshopt** (`EXT_meshopt_compression`, our canonical format): decoder is
   bundled from `three/examples/jsm/libs/meshopt_decoder.module.js` via drei.
   Works offline.
-- **Draco** (`KHR_draco_mesh_compression`): WASM decoder is fetched lazily
-  from Google's gstatic CDN (`DRACO_DECODER_PATH` in `loaders.ts`), only when
-  a Draco file is actually loaded. To self-host, copy
-  `node_modules/three/examples/jsm/libs/draco/gltf/` to `public/draco/` and
-  point `DRACO_DECODER_PATH` at `/draco/`.
+- **Draco** (`KHR_draco_mesh_compression`): WASM decoder is self-hosted at
+  `/draco/` (`DRACO_DECODER_PATH` in `loaders.ts`) and fetched lazily, only
+  when a Draco file is actually loaded. `scripts/copy-draco.mjs` copies it from
+  the installed `three` on postinstall/predev/prebuild; `public/draco/` is
+  gitignored.
 
 Adding another loader/extension (e.g. KTX2 textures): extend the `GLTFLoader`
 in `loaders.ts` via `useGLTF`'s fourth `extendLoader` argument, keep the

@@ -7,7 +7,14 @@ import noRawCoordinates from "./eslint-rules/no-raw-coordinates.mjs";
 const sandbag = { rules: { "no-raw-coordinates": noRawCoordinates } };
 
 export default defineConfig([
-  globalIgnores([".next/**", "out/**", "coverage/**", "next-env.d.ts"]),
+  globalIgnores([
+    ".next/**",
+    "out/**",
+    "coverage/**",
+    "next-env.d.ts",
+    "public/draco/**", // vendored decoder copied from three
+    ".claude/worktrees/**",
+  ]),
   ...nextVitals,
   ...nextTs,
   prettier,
