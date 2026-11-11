@@ -15,13 +15,12 @@ import {
   type UploadKind,
 } from "@/lib/upload/validate";
 import { readZipEntryNames } from "@/lib/upload/zip";
+import { AttachPicker } from "./AttachPicker";
 import { canResumeScan, createScan, notifyUploadComplete } from "./actions";
 
 type Phase = "idle" | "starting" | "uploading" | "paused" | "error" | "done";
 type Progress = { sent: number; total: number; rate: number };
 
-const field =
-  "rounded-lg border border-stone-300 bg-white px-3 py-2 font-mono text-sm dark:border-stone-700 dark:bg-stone-900";
 const button =
   "rounded-lg px-4 py-2 font-medium focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-60";
 const primary = `${button} bg-stone-900 text-white hover:bg-stone-700 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-stone-300`;
@@ -210,29 +209,12 @@ export function UploadForm(props: {
 
       <fieldset className="flex flex-col gap-3" disabled={busy || started}>
         <legend className="mb-1 font-medium">OpenBeta (optional)</legend>
-        <label className="flex flex-col gap-1 text-sm">
-          Area id
-          <input
-            name="areaId"
-            className={field}
-            placeholder="UUID"
-            pattern="[0-9a-fA-F-]{36}"
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
-          Climb id
-          <input
-            name="climbId"
-            className={field}
-            placeholder="UUID"
-            pattern="[0-9a-fA-F-]{36}"
-          />
-        </label>
+        <AttachPicker />
         <label className="flex items-start gap-2 text-sm">
           <input type="checkbox" name="sensitive" className="mt-1" />
           <span>
-            This area is sensitive or closed — hide its location. (Needs the
-            area id.)
+            This area is sensitive or closed — hide its location. (Needs an
+            attached area.)
           </span>
         </label>
       </fieldset>
