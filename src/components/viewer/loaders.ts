@@ -6,14 +6,13 @@
  *   meshopt-compressed (EXT_meshopt_compression), so this is the hot path and
  *   needs no network access.
  * - Draco: three's DRACOLoader needs WASM decoder files served from somewhere.
- *   We use drei's default host (Google's gstatic CDN), pinned below. To
- *   self-host, copy `node_modules/three/examples/jsm/libs/draco/gltf/` into
- *   `public/draco/` and change DRACO_DECODER_PATH to "/draco/".
+ *   We self-host them from `/draco/` (copied from three by
+ *   `scripts/copy-draco.mjs` on postinstall/predev/prebuild), so viewers make
+ *   no third-party requests.
  */
 import { useGLTF } from "@react-three/drei";
 
-export const DRACO_DECODER_PATH =
-  "https://www.gstatic.com/draco/versioned/decoders/1.5.7/";
+export const DRACO_DECODER_PATH = "/draco/";
 
 /** Load a scan GLB with Draco + meshopt enabled. Suspends while loading. */
 export function useScanGLTF(url: string) {
