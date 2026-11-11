@@ -35,6 +35,14 @@ export default async function AreasPage() {
         <p className="text-sm text-stone-600 dark:text-stone-400">
           Areas with published 3D scans. Area names come from OpenBeta.
         </p>
+        <p className="text-sm">
+          <Link
+            href="/search"
+            className="font-medium underline hover:no-underline"
+          >
+            Search by climb name or grade
+          </Link>
+        </p>
       </header>
 
       {empty && (
