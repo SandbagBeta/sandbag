@@ -217,3 +217,14 @@ export interface ClimbCache {
   last_error: string | null;
   last_error_at: string | null;
 }
+
+/** A verdict notice for the author of a reviewed scan or climb (issue #19). */
+export interface Notification {
+  id: string;
+  user_id: string;
+  /** The review that caused it; verdict and reason are read from `reviews`. */
+  review_id: string;
+  created_at: string;
+  /** Null until the user marks it read. */
+  read_at: string | null;
+}
