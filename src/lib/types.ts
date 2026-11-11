@@ -240,3 +240,15 @@ export interface ScanStatusEvent {
   to_status: LifecycleStatus;
   created_at: string;
 }
+
+/**
+ * Freetext "can't find it" note on a scan (issue #28). Private to the uploader
+ * and reviewers: never render it publicly or include it in exports, because
+ * free text can name a sensitive spot.
+ */
+export interface ScanAttachNote {
+  scan_id: string;
+  /** 1-500 characters; the database refuses coordinate-looking pairs. */
+  note: string;
+  updated_at: string;
+}

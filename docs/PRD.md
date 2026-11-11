@@ -160,6 +160,7 @@ scan_status_events  id, scan_id, from_status?, to_status, created_at  (trigger-w
 notifications    id, user_id, review_id, created_at, read_at  (trigger on reviews; author only)
 reviews          id, subject_type: scan|climb|area, subject_id, reviewer_id,
                  verdict: approve|request_changes|reject, reason, created_at
+scan_attach_notes  scan_id, note (<=500 chars), updated_at  (private: uploader + reviewers; never exported)
 area_cache       openbeta_area_id, name, path_tokens, ancestors uuid[], is_leaf,
                  total_climbs, organizations jsonb, openbeta_updated_at,
                  fetched_at, refresh_after, last_error?, ancestors_changed_at?
