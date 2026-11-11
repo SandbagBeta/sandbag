@@ -121,3 +121,12 @@ release), keys 1-4 pick the type (sticky; also retypes the selected hold),
 Delete/Backspace removes, Ctrl+Z / Ctrl+Shift+Z undo/redo. `<BoulderViewer bvh>`
 wraps the scan in drei `<Bvh firstHitOnly>`. Holds live in client state only;
 saving is a later PR.
+
+### Sequence and paths (issue #22, client-side only)
+
+`SequencePanel` lists holds in `seq_order` (up/down buttons or drag; the
+`reorder` action renumbers 0..n-1; default is click order). The `line` path
+is derived from that order and drawn with `ClimbLine`. "Draw topout/downclimb"
+appends one surface point per click (`pathDraw.ts`), Enter commits, Escape
+cancels. `ValidationPanel` runs `validateClimbAnnotations` against the loaded
+mesh (`meshSurface.ts`) and lists issues inline. Nothing is saved yet.
