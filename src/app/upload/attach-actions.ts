@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "../../lib/supabase/server";
+import { uploadFailureHelp } from "../../lib/upload/failureHelp";
 import { listAttachClimbs, searchAttachAreas } from "../../lib/upload/attach";
 import { saveAttachNote } from "../../lib/upload/attach-note";
 
@@ -13,6 +14,8 @@ async function signedIn() {
 const SIGNED_OUT = {
   ok: false as const,
   error: "Your session expired. Sign in again.",
+  code: "session_expired" as const,
+  help: uploadFailureHelp("session_expired"),
 };
 
 export async function searchAreasAction(query: string) {

@@ -45,7 +45,11 @@ describe("checkUploadFile", () => {
 
   it("tells OBJ users to zip the OBJ with its textures", () => {
     const r = checkUploadFile({ name: "scan.OBJ", size: 10 });
-    expect(r).toEqual({ ok: false, error: expect.stringMatching(/zip/) });
+    expect(r).toEqual({
+      ok: false,
+      error: expect.stringMatching(/zip/),
+      code: "obj_needs_zip",
+    });
   });
 
   it.each([
@@ -62,7 +66,11 @@ describe("checkUploadFile", () => {
   it("caps at the 200MiB bucket limit in supabase/config.toml", () => {
     expect(MAX_UPLOAD_BYTES).toBe(200 * MB);
     const r = checkUploadFile({ name: "a.ply", size: 250 * MB });
-    expect(r).toEqual({ ok: false, error: expect.stringContaining("200 MB") });
+    expect(r).toEqual({
+      ok: false,
+      error: expect.stringContaining("200 MB"),
+      code: "file_too_large",
+    });
   });
 
   it("reads the extension of the last path segment only", () => {

@@ -231,6 +231,12 @@ describe("processNextQcJob", () => {
     expect((await t.run()).result).toBe("exhausted");
     expect(t.scan().status).toBe("failed_qc");
     expect(JSON.stringify(t.scan().qc_report)).toMatch(/our side/);
+    expect(t.fake.row("failure_logs")).toMatchObject({
+      stage: "qc",
+      code: "retries_exhausted",
+      user_id: UPLOADER,
+      scan_id: SCAN,
+    });
   });
 
   it("does not re-run QC when the last attempt's lease expired", async () => {
@@ -239,6 +245,10 @@ describe("processNextQcJob", () => {
     expect(t.downloads).toEqual([]);
     expect(t.scan().status).toBe("failed_qc");
     expect(t.names()).toContain("fail_qc_job");
+    expect(t.fake.row("failure_logs")).toMatchObject({
+      code: "lease_expired",
+      user_id: UPLOADER,
+    });
   });
 
   it("never logs coordinates or file contents", async () => {
@@ -254,6 +264,10 @@ describe("failStuckScans", () => {
   it("moves stuck processing scans to failed_qc", async () => {
     const t = setup({ status: "processing" });
     expect(await failStuckScans(t.client, () => {})).toBe(1);
+    expect(t.fake.row("failure_logs")).toMatchObject({
+      code: "stuck_processing",
+      scan_id: SCAN,
+    });
     expect(t.scan().status).toBe("failed_qc");
   });
 

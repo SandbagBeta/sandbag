@@ -6,6 +6,7 @@ import {
 } from "../lifecycle";
 import type { LifecycleStatus, QcReport } from "../types";
 import { storageFor } from "../storage";
+import { logQcInfrastructureFailure } from "../upload/failures";
 import {
   derivedGlbKey,
   derivedThumbKey,
@@ -187,6 +188,11 @@ export async function processNextQcJob(
       await finishScan(db, scanId, status, "failed_qc", job.raw_path, {
         qc_report: infrastructureFailureReport(),
       });
+      await logQcInfrastructureFailure(db, {
+        scanId,
+        uploaderId: parseRawObjectKey(job.raw_path)?.uploaderId,
+        code: "lease_expired",
+      });
       await failInfra("lease expired on final attempt");
       return done("exhausted");
     }
@@ -275,6 +281,11 @@ export async function processNextQcJob(
         await finishScan(db, scanId, status, "failed_qc", job.raw_path, {
           qc_report: infrastructureFailureReport(),
         });
+        await logQcInfrastructureFailure(db, {
+          scanId,
+          uploaderId: parseRawObjectKey(job.raw_path)?.uploaderId,
+          code: "retries_exhausted",
+        });
       } catch {
         /* the stuck-scan pass picks it up */
       }
@@ -305,6 +316,10 @@ export async function failStuckScans(
         patch: { qc_report: infrastructureFailureReport() },
       });
       moved++;
+      await logQcInfrastructureFailure(db, {
+        scanId: row.scan_id,
+        code: "stuck_processing",
+      });
       log(`qc scan=${row.scan_id} stuck in processing -> failed_qc`);
     } catch (e) {
       if (!(e instanceof TransitionConflictError)) {

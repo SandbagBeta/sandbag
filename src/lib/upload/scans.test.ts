@@ -173,7 +173,11 @@ describe("createScanForUpload", () => {
       { flagArea },
     );
     expect(flagArea).not.toHaveBeenCalled();
-    expect(r).toEqual({ ok: false, error: expect.stringMatching(/area id/) });
+    expect(r).toEqual({
+      ok: false,
+      error: expect.stringMatching(/area id/),
+      code: "area_needed",
+    });
     expect(f.calls.inserts).toEqual([]);
   });
 
@@ -203,6 +207,7 @@ describe("createScanForUpload", () => {
     expect(r).toEqual({
       ok: false,
       error: expect.stringMatching(/doesn't know that OpenBeta/),
+      code: "unknown_area",
     });
   });
 });
@@ -233,6 +238,14 @@ describe("verifyUploadComplete", () => {
       rawPath: `${USER}/${SCAN}/raw/source.ply`,
     });
     // No status write: the fake has no update(), so any attempt would throw.
+  });
+
+  it("reports enqueue_failed instead of throwing when the queue is down", async () => {
+    const { client } = fakeClient({ scan: own, list: file("source.ply") });
+    const enqueue = vi.fn().mockRejectedValue(new Error("down"));
+    expect(
+      await verifyUploadComplete(client, USER, SCAN, { enqueue }),
+    ).toMatchObject({ ok: false, code: "enqueue_failed" });
   });
 
   it.each([
