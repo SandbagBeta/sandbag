@@ -6,7 +6,27 @@ import {
   clampSizePercent,
   effectiveMarkerScale,
   markerScale,
+  safeScaleFactor,
 } from "./markerScale";
+
+describe("effectiveMarkerScale with a reviewed scale (#137)", () => {
+  it("keeps the displayed size independent of the factor", () => {
+    // Markers live in the scaled group: local scale * factor is what is shown.
+    const factor = 13.3;
+    expect(effectiveMarkerScale(20, 100, factor) * factor).toBeCloseTo(
+      effectiveMarkerScale(20, 100, 1),
+    );
+  });
+  it("ignores an unusable factor", () => {
+    expect(effectiveMarkerScale(2, 100, 0)).toBe(effectiveMarkerScale(2, 100));
+    expect(effectiveMarkerScale(2, 100, NaN)).toBe(
+      effectiveMarkerScale(2, 100),
+    );
+    expect(safeScaleFactor("2")).toBe(1);
+    expect(safeScaleFactor(2000)).toBe(1);
+    expect(safeScaleFactor(2.5)).toBe(2.5);
+  });
+});
 
 describe("markerScale", () => {
   it("is 1 at the reference size and proportional around it", () => {

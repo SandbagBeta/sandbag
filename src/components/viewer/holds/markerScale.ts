@@ -5,6 +5,8 @@
  * Pure: no three.js, no React.
  */
 
+import { SCALE_FACTOR_MAX, SCALE_FACTOR_MIN } from "@/lib/types";
+
 /** Bounding-box diagonal (file units) the marker constants were authored for. */
 export const REFERENCE_DIAGONAL = 4;
 export const MIN_AUTO_SCALE = 0.02;
@@ -31,10 +33,30 @@ export function clampSizePercent(value: unknown): number {
   return Math.min(MAX_SIZE_PERCENT, Math.max(MIN_SIZE_PERCENT, Math.round(n)));
 }
 
-/** Final multiplier: scan-derived scale times the user's percentage. */
+/**
+ * Final multiplier: scan-derived scale times the user's percentage.
+ * `diagonal` is the scan's size as displayed (real size, after the reviewed
+ * scale, #137). Markers are children of the scene group, which is scaled by
+ * `scaleFactor`, so their local geometry is divided by it to keep the displayed
+ * size the same whatever the factor.
+ */
 export function effectiveMarkerScale(
   diagonal: number | null | undefined,
   percent: number,
+  scaleFactor = 1,
 ): number {
-  return markerScale(diagonal) * (clampSizePercent(percent) / 100);
+  return (
+    (markerScale(diagonal) * (clampSizePercent(percent) / 100)) /
+    safeScaleFactor(scaleFactor)
+  );
+}
+
+/** A usable render scale: finite and in range, else 1 (never blank the scene). */
+export function safeScaleFactor(value: unknown): number {
+  return typeof value === "number" &&
+    Number.isFinite(value) &&
+    value >= SCALE_FACTOR_MIN &&
+    value <= SCALE_FACTOR_MAX
+    ? value
+    : 1;
 }

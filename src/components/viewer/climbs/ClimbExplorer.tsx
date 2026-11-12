@@ -21,6 +21,8 @@ export interface ClimbExplorerProps {
   paths: ClimbPath[];
   /** Raw `?climb=` value; ignored unless it names one of `climbs`. */
   initialClimbId?: string;
+  /** The scan's reviewed scale (`scans.scale_factor`); default 1. */
+  scale?: number;
   /** Rendered at the top of the side panel (e.g. boulder title and metadata). */
   header?: ReactNode;
   /** Visually hidden text alternative for the canvas. */
@@ -38,6 +40,7 @@ export function ClimbExplorer({
   holds,
   paths,
   initialClimbId,
+  scale,
   header,
   children,
 }: ClimbExplorerProps) {
@@ -77,6 +80,7 @@ export function ClimbExplorer({
       >
         <ClimbViewer
           src={src}
+          scale={scale}
           label={label}
           className="h-full w-full"
           holds={holds}

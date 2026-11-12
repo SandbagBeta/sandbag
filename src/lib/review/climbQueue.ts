@@ -26,6 +26,7 @@ export interface ReviewClimb {
   climb: PendingClimb & Pick<Climb, "description" | "fa_info">;
   /** Canonical GLB path of the (published) scan the climb is drawn on. */
   glb_path: string | null;
+  scale_factor: number;
   holds: Hold[];
   paths: ClimbPath[];
 }
@@ -81,7 +82,11 @@ export async function loadReviewClimb(
   if (!data) return null;
   const row = data as Row;
   const [scan, holds, paths, byId] = await Promise.all([
-    db.from("scans").select("glb_path").eq("id", row.scan_id).maybeSingle(),
+    db
+      .from("scans")
+      .select("glb_path, scale_factor")
+      .eq("id", row.scan_id)
+      .maybeSingle(),
     db.from("holds").select("*").eq("climb_id", row.id),
     db.from("paths").select("*").eq("climb_id", row.id),
     handles(db, [row.created_by]),
@@ -96,6 +101,8 @@ export async function loadReviewClimb(
       description: row.description,
       fa_info: row.fa_info,
     },
+    scale_factor:
+      (scan.data as { scale_factor?: number } | null)?.scale_factor ?? 1,
     glb_path:
       (scan.data as { glb_path: string | null } | null)?.glb_path ?? null,
     holds: (holds.data ?? []) as Hold[],

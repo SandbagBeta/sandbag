@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useReducer, useRef, useState } from "react";
+import {
+  useContext,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
 import { useThree } from "@react-three/fiber";
 import {
   DoubleSide,
@@ -16,7 +23,8 @@ import type { HoldType, Vec3 } from "@/lib/types";
 import { BoulderViewer, type BoulderViewerProps } from "../BoulderViewer";
 import { ClimbLine } from "../holds/ClimbLine";
 import { HoldMarkers } from "../holds/HoldMarkers";
-import { useMarkerScale } from "../holds/markerSize";
+import { ScanScaleContext, useMarkerScale } from "../holds/markerSize";
+import { safeScaleFactor } from "../holds/markerScale";
 import { useScanGLTF } from "../loaders";
 import { AnnotateControls } from "./AnnotateControls";
 import { createEditorStore, type HoldPlacement } from "./editorStore";
@@ -205,6 +213,7 @@ function AnnotateScene({
   const controls = useThree((s) => s.controls) as { enabled: boolean } | null;
   const invalidate = useThree((s) => s.invalidate);
   const [drag, setDrag] = useState<Drag | null>(null);
+  const scale = safeScaleFactor(useContext(ScanScaleContext));
   // Latest props/three state without re-binding the DOM listeners.
   const live = useRef({
     activeType,
@@ -213,6 +222,7 @@ function AnnotateScene({
     controls,
     draw,
     onDrawPoint,
+    scale,
   });
   useEffect(() => {
     live.current = {
@@ -222,6 +232,7 @@ function AnnotateScene({
       controls,
       draw,
       onDrawPoint,
+      scale,
     };
   });
   useEffect(() => onMesh(buildMeshSurface(scan)), [scan, onMesh]);
@@ -269,7 +280,8 @@ function AnnotateScene({
       );
       ray.setFromCamera(ndc, camera);
       const hit = ray.intersectObject(scan, true)[0];
-      const p = hit && pickFromHit(hit, offsets, ray.ray.direction);
+      const p =
+        hit && pickFromHit(hit, offsets, ray.ray.direction, live.current.scale);
       return p
         ? { position: p.position, normal: p.normal, face_index: p.faceIndex }
         : null;
@@ -279,7 +291,10 @@ function AnnotateScene({
       const r = el.getBoundingClientRect();
       let best: { id: string; d: number } | null = null;
       for (const h of store.getState().holds) {
-        tmp.fromArray(h.position).project(camera);
+        tmp
+          .fromArray(h.position)
+          .multiplyScalar(live.current.scale)
+          .project(camera);
         const d = Math.hypot(
           r.left + ((tmp.x + 1) / 2) * r.width - e.clientX,
           r.top + ((1 - tmp.y) / 2) * r.height - e.clientY,
