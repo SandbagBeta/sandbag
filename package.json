@@ -30,6 +30,7 @@
   "dependencies": {
     "@gltf-transform/core": "4.5.1",
     "@gltf-transform/extensions": "4.5.1",
+    "@gltf-transform/functions": "4.5.1",
     "@react-three/drei": "10.7.9",
     "@react-three/fiber": "9.8.2",
     "@supabase/ssr": "0.12.7",
@@ -41,12 +42,12 @@
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "server-only": "0.0.1",
+    "sharp": "0.35.5",
     "three": "0.187.0",
     "tus-js-client": "4.3.1",
     "zustand": "5.1.0"
   },
   "devDependencies": {
-    "@gltf-transform/functions": "4.5.1",
     "@tailwindcss/postcss": "4.3.5",
     "@testing-library/jest-dom": "7.0.1",
     "@testing-library/react": "16.3.3",

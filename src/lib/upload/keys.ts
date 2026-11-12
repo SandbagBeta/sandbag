@@ -25,6 +25,30 @@ export function rawObjectKey(
   return `${uploaderId.toLowerCase()}/${scanId.toLowerCase()}/raw/${storedFileName(kind)}`;
 }
 
+/** Canonical GLB the QC worker writes (ADR 002 §3), in the `uploads` bucket. */
+export function derivedGlbKey(
+  uploaderId: string,
+  scanId: string,
+  contentHash: string,
+): string {
+  if (
+    !isUuid(uploaderId) ||
+    !isUuid(scanId) ||
+    !/^[0-9a-f]{64}$/.test(contentHash)
+  ) {
+    throw new TypeError("derivedGlbKey: bad id or hash");
+  }
+  return `${uploaderId.toLowerCase()}/${scanId.toLowerCase()}/derived/${contentHash}.glb`;
+}
+
+/** The thumbnail next to it. */
+export function derivedThumbKey(uploaderId: string, scanId: string): string {
+  if (!isUuid(uploaderId) || !isUuid(scanId)) {
+    throw new TypeError("derivedThumbKey: ids must be UUIDs");
+  }
+  return `${uploaderId.toLowerCase()}/${scanId.toLowerCase()}/derived/thumb.webp`;
+}
+
 /** Folder holding a scan's raw file, for listing. */
 export function rawFolder(uploaderId: string, scanId: string): string {
   return `${uploaderId.toLowerCase()}/${scanId.toLowerCase()}/raw`;

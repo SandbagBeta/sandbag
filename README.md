@@ -100,7 +100,7 @@ flowchart LR
   Pages --> OB
 ```
 
-The QC route is shown as designed in [ADR 003](docs/decisions/003-qc-pipeline-runtime.md); it runs in Node inside the Next.js app, not as an Edge Function, and is built in stages (#16). The route that claims jobs, runs the checks and writes the verdict (`POST /api/qc/run`, `src/lib/qc/worker.ts`, secret `QC_RUN_SECRET`) is in. Canonical GLB output is not, so a scan that passes QC reaches `pending_review` with no published mesh and can't be published until that lands. Climbing metadata (areas, routes, grades of record) lives in OpenBeta; we store only the 3D layer and link to OpenBeta ids. Every coordinate the app outputs goes through the location formatter, which fails closed to `hidden`. Details: [docs/PRD.md §7](docs/PRD.md) and the [ADRs](docs/decisions/).
+The QC route is shown as designed in [ADR 003](docs/decisions/003-qc-pipeline-runtime.md); it runs in Node inside the Next.js app, not as an Edge Function, and is built in stages (#16). The route that claims jobs, runs the checks and writes the verdict (`POST /api/qc/run`, `src/lib/qc/worker.ts`, secret `QC_RUN_SECRET`) is in. A scan that passes QC also gets its canonical GLB (one welded, meshopt-compressed mesh, recentred with its lowest point at y = 0, metadata stripped) and a WebP thumbnail, written to `uploads/{uploader}/{scan}/derived/`; `glb_path` and `content_hash` land in the same atomic update as `pending_review`. Climbing metadata (areas, routes, grades of record) lives in OpenBeta; we store only the 3D layer and link to OpenBeta ids. Every coordinate the app outputs goes through the location formatter, which fails closed to `hidden`. Details: [docs/PRD.md §7](docs/PRD.md) and the [ADRs](docs/decisions/).
 
 ## Stack
 
