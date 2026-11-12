@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Distribution } from "./consensus";
 import { gradeRank } from "./vScale";
+import type { VoteFailureCode } from "./voteFailure";
 
 /** A row of public.climb_grade_distribution(p_climb_id). */
 export interface DistributionRow {
@@ -28,7 +29,12 @@ export function rowsToDistribution(
 }
 
 export class VoteError extends Error {
-  constructor(what: string, cause: { message: string }) {
+  constructor(
+    what: string,
+    cause: { message: string },
+    /** What the user is told (see voteFailure.ts). */
+    readonly code: VoteFailureCode = "error",
+  ) {
     super(`Could not ${what}: ${cause.message}`);
     this.name = "VoteError";
   }
@@ -62,7 +68,35 @@ export async function loadMyVote(
   return (data as { grade: string } | null)?.grade ?? null;
 }
 
-/** One vote per user per climb; voting again changes it. RLS enforces ownership and published-only. */
+/** Postgres error as supabase-js reports it. */
+interface PgError {
+  message: string;
+  code?: string;
+}
+
+/**
+ * Row-level security refusing a write on a climb that isn't published (the
+ * policy's check) is the one 42501 the user can act on. A missing column
+ * privilege also says 42501 but names "permission denied", and is our bug.
+ */
+function classify(error: PgError): VoteFailureCode {
+  if (error.code === "23503") return "unknown_climb";
+  if (error.code === "42501" && /row-level security/i.test(error.message)) {
+    return "not_published";
+  }
+  return "error";
+}
+
+/**
+ * One vote per user per climb; voting again changes it. RLS enforces
+ * ownership and published-only.
+ *
+ * Not an upsert: `ON CONFLICT DO UPDATE` also writes `climb_id` and `user_id`,
+ * and `authenticated` may only update `grade` (that grant is what stops a vote
+ * being reassigned), so an upsert is refused. Update first; if the user has no
+ * row yet, insert; if a concurrent request inserted one in between (23505),
+ * update again.
+ */
 export async function saveVote(
   db: SupabaseClient,
   climbId: string,
@@ -70,13 +104,34 @@ export async function saveVote(
   grade: string,
 ): Promise<void> {
   if (gradeRank(grade) === null) {
-    throw new VoteError("save your vote", { message: "not a V-scale grade" });
+    throw new VoteError(
+      "save your vote",
+      { message: "not a V-scale grade" },
+      "invalid_grade",
+    );
   }
+  const value = grade.trim().toUpperCase();
+  const fail = (error: PgError): never => {
+    throw new VoteError("save your vote", error, classify(error));
+  };
+  const update = async (): Promise<boolean> => {
+    const { data, error } = await db
+      .from("grade_votes")
+      .update({ grade: value })
+      .eq("climb_id", climbId)
+      .eq("user_id", userId)
+      .select("climb_id");
+    if (error) return fail(error);
+    return (data?.length ?? 0) > 0;
+  };
+
+  if (await update()) return;
   const { error } = await db
     .from("grade_votes")
-    .upsert(
-      { climb_id: climbId, user_id: userId, grade: grade.trim().toUpperCase() },
-      { onConflict: "climb_id,user_id" },
-    );
-  if (error) throw new VoteError("save your vote", error);
+    .insert({ climb_id: climbId, user_id: userId, grade: value });
+  if (!error) return;
+  if (error.code !== "23505") return fail(error);
+  if (!(await update())) {
+    fail({ message: "the vote changed while saving", code: "40001" });
+  }
 }

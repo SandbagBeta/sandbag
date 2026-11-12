@@ -8,6 +8,8 @@ import {
   totalVotes,
   type Distribution,
 } from "@/lib/grades/consensus";
+import type { FailureHelp } from "@/lib/annotations/failureHelp";
+import { voteFailureHelp, type VoteOutcome } from "@/lib/grades/voteFailure";
 import { GradeHistogram } from "./GradeHistogram";
 import { GradePicker } from "./GradePicker";
 
@@ -38,12 +40,12 @@ export function GradeVotes({
   proposedGrade: string;
   distribution: Distribution;
   myVote?: string | null;
-  onVote?: (grade: string) => Promise<void>;
+  onVote?: (grade: string) => Promise<void | VoteOutcome>;
 }) {
   const [dist, setDist] = useState(distribution);
   const [mine, setMine] = useState(myVote);
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [help, setHelp] = useState<FailureHelp | null>(null);
 
   const consensus = consensusGrade(dist);
   const badge = sandbagLabel(sandbagGrades(consensus, proposedGrade));
@@ -53,16 +55,22 @@ export function GradeVotes({
     if (!onVote || grade === mine) return;
     const prevDist = dist;
     const prevMine = mine;
-    setError(null);
+    setHelp(null);
     setDist(applyVote(dist, mine, grade));
     setMine(grade);
     setPending(true);
     try {
-      await onVote(grade);
+      const outcome = await onVote(grade);
+      if (outcome && !outcome.ok) {
+        setDist(prevDist);
+        setMine(prevMine);
+        setHelp(outcome.help);
+      }
     } catch {
+      // A thrown error carries no reason the browser may read.
       setDist(prevDist);
       setMine(prevMine);
-      setError("Could not save your vote. Try again.");
+      setHelp(voteFailureHelp("error"));
     } finally {
       setPending(false);
     }
@@ -91,9 +99,35 @@ export function GradeVotes({
       {onVote && (
         <GradePicker value={mine} onChange={vote} disabled={pending} />
       )}
-      <p role="status" className="text-sm text-red-600 dark:text-red-400">
-        {error}
-      </p>
+      <VoteHelp help={help} />
     </section>
+  );
+}
+
+/** What happened, which step, what to do, next steps (FailureHelp rubric). */
+function VoteHelp({ help }: { help: FailureHelp | null }) {
+  return (
+    <div role="status" className="text-sm text-red-700 dark:text-red-300">
+      {help && (
+        <div className="space-y-1">
+          <p>
+            <strong>{help.whatHappened}</strong>{" "}
+            <span className="opacity-80">({help.stageLabel})</span>
+          </p>
+          {help.whatYouCanDo.length > 0 && (
+            <p>What you can do: {help.whatYouCanDo.join(" ")}</p>
+          )}
+          {help.nextSteps.length > 0 && <p>Next: {help.nextSteps.join(" ")}</p>}
+          {help.reportPath && (
+            <p>
+              <a href={help.reportPath} className="underline">
+                Report this problem
+              </a>{" "}
+              (reference {help.reference})
+            </p>
+          )}
+        </div>
+      )}
+    </div>
   );
 }

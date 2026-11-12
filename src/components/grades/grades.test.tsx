@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { voteFailureHelp } from "@/lib/grades/voteFailure";
 import { applyVote, GradeVotes } from "./GradeVotes";
 
 describe("applyVote", () => {
@@ -37,11 +38,42 @@ describe("GradeVotes", () => {
     );
   });
 
-  it("rolls back and reports when saving fails", async () => {
+  it("shows the server's reason, step, advice and report link, and rolls back", async () => {
+    const onVote = vi.fn().mockResolvedValue({
+      ok: false,
+      help: voteFailureHelp("error", {
+        reference: "SB-0123ABCD",
+        reportPath: "/report-problem?ref=SB-0123ABCD",
+      }),
+    });
+    render(<GradeVotes proposedGrade="V3" distribution={{}} onVote={onVote} />);
+    fireEvent.click(screen.getByRole("radio", { name: "V4" }));
+    await screen.findByText(/something went wrong on our side/);
+    expect(screen.getByText(/Saving your vote/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Report this problem" }),
+    ).toHaveAttribute("href", "/report-problem?ref=SB-0123ABCD");
+    expect(screen.getByRole("radio", { name: "V4" })).not.toBeChecked();
+  });
+
+  it("explains a sign-in problem without a report link", async () => {
+    const onVote = vi
+      .fn()
+      .mockResolvedValue({ ok: false, help: voteFailureHelp("signed_out") });
+    render(<GradeVotes proposedGrade="V3" distribution={{}} onVote={onVote} />);
+    fireEvent.click(screen.getByRole("radio", { name: "V4" }));
+    await screen.findByText(/sign-in expired/);
+    expect(
+      screen.queryByRole("link", { name: "Report this problem" }),
+    ).toBeNull();
+  });
+
+  it("rolls back and explains when saving throws", async () => {
     const onVote = vi.fn().mockRejectedValue(new Error("x"));
     render(<GradeVotes proposedGrade="V3" distribution={{}} onVote={onVote} />);
     fireEvent.click(screen.getByRole("radio", { name: "V4" }));
-    await screen.findByText(/Could not save/);
+    await screen.findByText(/Your vote wasn't saved/);
+    expect(screen.getByText(/What you can do/)).toBeInTheDocument();
     expect(screen.getByText("No grade votes yet.")).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "V4" })).not.toBeChecked();
   });
