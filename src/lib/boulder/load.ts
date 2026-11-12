@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { supabasePublicUrl } from "@/lib/storage";
 import type { Climb, ClimbPath, Hold, Scan } from "@/lib/types";
 
 /**
@@ -89,8 +90,7 @@ export async function loadBoulder(
 
 /** Public URL of an object in the `published` bucket (public read, ADR 002). */
 export function publishedGlbUrl(supabaseUrl: string, glbPath: string): string {
-  const key = glbPath.split("/").map(encodeURIComponent).join("/");
-  return `${supabaseUrl.replace(/\/+$/, "")}/storage/v1/object/public/published/${key}`;
+  return supabasePublicUrl(supabaseUrl, "published", glbPath);
 }
 
 /**

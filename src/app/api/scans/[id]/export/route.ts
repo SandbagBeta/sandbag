@@ -1,4 +1,5 @@
 import { buildBoulderExport } from "@/lib/export/boulder";
+import { storageFor } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import type { Climb, ClimbPath, Hold } from "@/lib/types";
 
@@ -35,16 +36,18 @@ export async function GET(
     .eq("status", "published");
   const climbs = (climbRows ?? []) as Climb[];
   const ids = climbs.map((c) => c.id);
-  const [holds, paths, glbRes] = await Promise.all([
+  const [holds, paths, glbBytes] = await Promise.all([
     ids.length
       ? db.from("holds").select("*").in("climb_id", ids)
       : { data: [] as Hold[] },
     ids.length
       ? db.from("paths").select("*").in("climb_id", ids)
       : { data: [] as ClimbPath[] },
-    db.storage.from("published").download(scan.glb_path),
+    storageFor(db)
+      .download({ bucket: "published", key: scan.glb_path })
+      .catch(() => null),
   ]);
-  if (glbRes.error || !glbRes.data) {
+  if (!glbBytes) {
     return Response.json({ error: "mesh unavailable" }, { status: 502 });
   }
 
@@ -81,7 +84,7 @@ export async function GET(
       holds: (holds.data ?? []) as Hold[],
       paths: (paths.data ?? []) as ClimbPath[],
       contributors,
-      glb: new Uint8Array(await glbRes.data.arrayBuffer()),
+      glb: glbBytes,
       exportedAt: new Date().toISOString(),
     });
   } catch {

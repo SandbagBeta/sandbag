@@ -6,6 +6,7 @@ import {
   rawObjectKey,
   UPLOADS_BUCKET,
 } from "./keys";
+import { storageFor } from "../storage";
 import { checkUploadFile, MAX_UPLOAD_BYTES } from "./validate";
 
 /**
@@ -160,18 +161,17 @@ export async function verifyUploadComplete(
   if (!scan.ok) return scan;
 
   const folder = rawFolder(userId, scanId);
-  const { data, error } = await client.storage
-    .from(UPLOADS_BUCKET)
-    .list(folder);
-  if (error)
+  let listed;
+  try {
+    listed = await storageFor(client).list(UPLOADS_BUCKET, folder);
+  } catch {
     return { ok: false, error: "We couldn't check the upload. Try again." };
-  const files = (data ?? []).filter((f) =>
-    parseRawObjectKey(`${folder}/${f.name}`),
-  );
+  }
+  const files = listed.filter((f) => parseRawObjectKey(`${folder}/${f.name}`));
   const [raw] = files;
   if (!raw || files.length !== 1)
     return { ok: false, error: "The upload hasn't finished yet." };
-  const size = Number((raw.metadata as { size?: number } | null)?.size ?? 0);
+  const size = raw.size ?? 0;
   if (size > MAX_UPLOAD_BYTES)
     return { ok: false, error: "That file is over 200 MB." };
 

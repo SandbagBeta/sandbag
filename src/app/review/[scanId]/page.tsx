@@ -3,6 +3,7 @@ import Link from "next/link";
 import { forbidden, notFound } from "next/navigation";
 import { BoulderViewer } from "@/components/viewer";
 import { CHECKLIST, canReviewInUi, loadReviewScan } from "@/lib/review/queue";
+import { storageFor } from "@/lib/storage";
 import { createServiceClient } from "@/lib/supabase/service";
 import { loadAttachNote } from "@/lib/upload/attach-note";
 import { ReviewForm } from "../ReviewForm";
@@ -20,10 +21,14 @@ export const metadata: Metadata = {
  */
 async function pendingGlbUrl(glbPath: string | null): Promise<string | null> {
   if (!glbPath) return null;
-  const { data } = await createServiceClient()
-    .storage.from("uploads")
-    .createSignedUrl(glbPath, 3600);
-  return data?.signedUrl ?? null;
+  try {
+    return await storageFor(createServiceClient()).signedUrl(
+      { bucket: "uploads", key: glbPath },
+      3600,
+    );
+  } catch {
+    return null;
+  }
 }
 
 export default async function ReviewScanPage({
