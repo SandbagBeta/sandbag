@@ -1,7 +1,17 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { submitReview } from "@/lib/lifecycle";
+import { setScanScale, submitReview } from "@/lib/lifecycle";
+import {
+  logFailure,
+  newReference,
+  reportPathFor,
+} from "@/lib/annotations/failureLog";
+import {
+  SCALE_SIGNED_OUT,
+  setScaleFor,
+  type ScaleFormState,
+} from "@/lib/review/scale";
 import { redirect } from "next/navigation";
 import {
   decideReview,
@@ -12,6 +22,54 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 
 export type ReviewFormState = DecideResult | null;
+
+/**
+ * Sets the scan's reviewed scale (#137). Identity and trust come from the
+ * session, never the form. The write is lifecycle `setScanScale`; an error on
+ * our side is logged privately and the maintainer gets a reference.
+ */
+export async function setScaleAction(
+  _prev: ScaleFormState,
+  formData: FormData,
+): Promise<ScaleFormState> {
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getUser();
+  if (!data.user) return { ok: false, help: SCALE_SIGNED_OUT };
+  const userId = data.user.id;
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("trust_level")
+    .eq("id", userId)
+    .maybeSingle();
+  const scanId = String(formData.get("scanId") ?? "");
+  const db = createServiceClient();
+
+  const result = await setScaleFor(
+    {
+      maintainerId: userId,
+      trustLevel: profile?.trust_level ?? null,
+      set: ({ scanId, factor }) =>
+        setScanScale(db, { maintainerId: userId, scanId, factor }),
+      logUnexpected: async (err) => {
+        const reference = newReference();
+        const logged = await logFailure(db, {
+          reference,
+          stage: "database",
+          code: "set_scale_failed",
+          userId,
+          scanId,
+          detail: err instanceof Error ? err.message : undefined,
+        });
+        return logged
+          ? { reference, reportPath: reportPathFor(reference) }
+          : null;
+      },
+    },
+    { scanId, factor: formData.get("factor") },
+  );
+  if (result?.ok) revalidatePath(`/review/${scanId}`);
+  return result;
+}
 
 /**
  * Identity and trust level come from the session and the profiles table,
