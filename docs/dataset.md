@@ -38,7 +38,7 @@ One hold = one label:
 | `normal` | Unit outward surface normal at `position` |
 | `face_index` | Global triangle index: the concatenation of the GLB's triangle primitives in glTF scene order (default scene, depth-first node traversal, primitives in order; non-triangle and empty primitives skipped) |
 | `type` | `start`, `hand`, `foot` or `finish` |
-| `seq_order` | 0-based order along the climb, or `null` |
+| `seq_order` | 0-based order along the climbing line for `start`, `hand` and `finish` holds, or `null`. Always `null` for `foot` holds: feet are optional single points of one climb, not part of the line, and belong to that climb only |
 
 The GLB is Draco-compressed. Face numbering is that of the **decoded** mesh, so decode with a standard glTF + Draco loader and flatten as above.
 

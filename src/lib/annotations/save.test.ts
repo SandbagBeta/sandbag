@@ -116,6 +116,60 @@ describe("parseSaveClimbInput", () => {
     }
   });
 
+  it("clears the sequence number of a foot hold instead of failing the save", () => {
+    const r = parseSaveClimbInput(
+      payload({
+        holds: [
+          hold("a", 1, "start", 0),
+          hold("b", 2, "hand", 1),
+          hold("c", 3, "finish", 2),
+          hold("f", 4, "foot", 3),
+        ],
+      }),
+    );
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.input.holds.find((h) => h.id === "f")!.seq_order).toBeNull();
+      expect(r.input.holds.find((h) => h.id === "c")!.seq_order).toBe(2);
+    }
+  });
+
+  it("closes the gaps that feet leave in the sequence, keeping the order", () => {
+    // Old editor: start 0, foot 1, hand 2, foot 3, finish 4.
+    const r = parseSaveClimbInput(
+      payload({
+        holds: [
+          hold("s", 1, "start", 0),
+          hold("f1", 2, "foot", 1),
+          hold("h", 3, "hand", 2),
+          hold("f2", 4, "foot", 3),
+          hold("e", 5, "finish", 4),
+        ],
+      }),
+    );
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      const seq = Object.fromEntries(
+        r.input.holds.map((h) => [h.id, h.seq_order]),
+      );
+      expect(seq).toEqual({ s: 0, f1: null, h: 1, f2: null, e: 2 });
+    }
+  });
+
+  it("leaves duplicate sequence numbers for the validator to report", () => {
+    const r = parseSaveClimbInput(
+      payload({
+        holds: [
+          hold("a", 1, "start", 0),
+          hold("b", 2, "hand", 0),
+          hold("c", 3, "finish", 2),
+        ],
+      }),
+    );
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.input.holds.map((h) => h.seq_order)).toEqual([0, 0, 2]);
+  });
+
   const twoLines = [
     {
       kind: "line",
@@ -181,6 +235,50 @@ describe("saveClimbAnnotations", () => {
       p_proposed_grade: "V3",
     });
     expect(JSON.stringify(args.p_holds)).not.toContain("scan_content_hash");
+  });
+
+  it("saves foot holds as unordered single points that don't count toward 3", async () => {
+    const { d, rpc } = deps();
+    const r = await saveClimbAnnotations(
+      d,
+      USER,
+      parse({
+        holds: [
+          hold("a", 1, "start", 0),
+          hold("b", 2, "hand", 1),
+          hold("c", 3, "finish", 2),
+          hold("f1", 4, "foot"),
+          hold("f2", 5, "foot"),
+        ],
+      }),
+    );
+    expect(r.ok).toBe(true);
+    const args = (
+      rpc.mock.calls[0] as unknown as [
+        string,
+        { p_holds: { type: string; seq_order: number | null }[] },
+      ]
+    )[1];
+    const feet = args.p_holds.filter((h) => h.type === "foot");
+    expect(feet).toHaveLength(2);
+    expect(feet.every((h) => h.seq_order === null)).toBe(true);
+
+    const tooFew = await saveClimbAnnotations(
+      d,
+      USER,
+      parse({
+        holds: [
+          hold("a", 1, "start", 0),
+          hold("b", 2, "hand", 1),
+          hold("f1", 4, "foot"),
+          hold("f2", 5, "foot"),
+        ],
+      }),
+    );
+    expect(tooFew).toMatchObject({ ok: false, code: "validation" });
+    if (!tooFew.ok && tooFew.code === "validation") {
+      expect(tooFew.issues.map((i) => i.code)).toEqual(["too_few_holds"]);
+    }
   });
 
   it("returns validator issues and writes nothing", async () => {
