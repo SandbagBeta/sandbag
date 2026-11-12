@@ -105,3 +105,26 @@ The server loads the mesh to validate against with `loadCanonicalSurface` (`src/
 ### Foot holds
 
 Migration `20261113000000_foot_holds_unordered.sql` (product decision, 2026-11-12). Foot holds are optional single points, not part of the line: they have no `seq_order` (table constraint `holds_foot_unordered`), they don't count toward the minimum of 3 holds, and they belong to exactly one climb (`holds.climb_id`), so two climbs on the same rock each keep their own, never shared. The migration cleans existing data first: feet lose their `seq_order` and each climb's other holds are renumbered 0..n-1. `saveClimb` clears a sequence number a foot hold arrives with (old drafts) instead of failing the save; the validator and the SQL functions refuse one (`foot_in_sequence`). The editor must draw the line, and number the sequence, from non-foot holds only, and show only the selected climb's feet.
+
+### Save failures: what the user is told, and the private log
+
+Migration `20261113000100_failure_logs.sql` and `src/lib/annotations/failure*.ts` (product decision, 2026-11-12: never leave the user with no information). Every failed `saveClimb` result keeps `{ ok: false, code, message, issues? }` and adds `help`:
+
+```
+help: {
+  stage, stageLabel,        // which part of the pipeline failed, e.g. "mesh" / "Reading the 3D model"
+  userFixable,              // true: only explain it. false: it was logged (below)
+  whatHappened,             // always starts "Your climb wasn't saved: ..."
+  whatYouCanDo: string[],   // concrete actions; for validation, one hint per distinct problem
+  nextSteps: string[],
+  reference?, reportPath?   // only when userFixable is false and the log write worked
+}
+```
+
+Stages: `session`, `payload`, `scan`, `mesh`, `validation`, `access`, `database`, `unknown`. Codes are unchanged (`validation`, `stale`, `not_found`, `forbidden`, `mesh_unavailable`, `error`, plus `signed_out` from the action), and `issues[]` entries may now carry `field` (`name`, `description`, `proposedGrade`, `faInfo`) when the problem is in something the user typed.
+
+- **The user can fix it** (annotation problems, a changed mesh, an expired sign-in, a too-long name): explained, nothing logged.
+- **The user can't** (the app sent a broken payload, scan or climb unavailable, not your climb, mesh unreadable, database error, anything unexpected): the server writes a row to the private `failure_logs` table (stage, code, user id, scan and climb ids, a sanitized provider message of at most 500 characters with coordinate-looking pairs removed, and counts such as `{ holds: 12, feet: 3 }`; never file contents, names or positions) and returns `help.reference` (`SB-` plus 8 characters, no I, L, O, U) and `help.reportPath` (`/report-problem?ref=SB-...`, a relative link; the page is a frontend job). If the log write itself fails, no reference is returned rather than one nobody can look up.
+- **Who can read or write the log:** only maintainers can `select` rows (RLS); nobody but the service role can write; users cannot read their own rows. Delete rows older than 90 days by hand (no automatic retention yet).
+- **Reporting:** the server action `reportSaveFailure(reference, note)` (`src/app/annotate/actions.ts`, backed by `report_failure(p_reference, p_user_id, p_note)`, service role only) lets the user the failure happened to attach a note of 1 to 1000 characters. It returns `{ ok: true }` or `{ ok: false, code: "invalid_note" | "not_found" | "error" | "signed_out", message }`.
+- Database and provider messages are never shown to the user, only logged. Keeping the user's unsaved annotation in the browser is the frontend's part.
