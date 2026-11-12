@@ -1,9 +1,10 @@
 "use client";
 
 import { useRef, useState, type DragEvent, type FormEvent } from "react";
+import Link from "next/link";
 import { Upload, type PreviousUpload } from "tus-js-client";
 import { createClient } from "@/lib/supabase/client";
-import { parseRawObjectKey } from "@/lib/upload/keys";
+import { parseRawObjectKey, rawObjectKey } from "@/lib/upload/keys";
 import { buildTusOptions, describeUploadError } from "@/lib/upload/tus";
 import {
   ACCEPT_ATTR,
@@ -38,8 +39,11 @@ export function UploadForm(props: {
   userId: string;
   supabaseUrl: string;
   anonKey: string;
+  /** A retry scan created by the scan page (#17); the file uploads into it. */
+  retryScanId?: string;
 }) {
-  const { userId, supabaseUrl, anonKey } = props;
+  const { userId, supabaseUrl, anonKey, retryScanId } = props;
+  const [startedScanId, setStartedScanId] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [problem, setProblem] = useState<string | null>(null); // blocks upload
   const [message, setMessage] = useState<string | null>(null);
@@ -121,6 +125,14 @@ export function UploadForm(props: {
       }
       await probe.options.urlStorage?.removeUpload(prev.urlStorageKey);
     }
+    if (!target && retryScanId && (await canResumeScan(retryScanId)).ok) {
+      const kind = extensionOf(file.name) as UploadKind;
+      target = {
+        scanId: retryScanId,
+        objectName: rawObjectKey(userId, retryScanId, kind),
+        contentType: CONTENT_TYPES[kind],
+      };
+    }
     if (!target) {
       const created = await createScan({
         fileName: file.name,
@@ -138,6 +150,7 @@ export function UploadForm(props: {
     }
 
     const { scanId } = target;
+    setStartedScanId(scanId);
     const tus = new Upload(file, {
       ...buildTusOptions({ ...tusBase, ...target }),
       onProgress: (sent, total) => {
@@ -251,6 +264,14 @@ export function UploadForm(props: {
         {phase === "done"
           ? "Uploaded. Automated checks will run next."
           : (problem ?? message)}
+        {phase === "done" && startedScanId && (
+          <>
+            {" "}
+            <Link href={`/upload/scans/${startedScanId}`} className="underline">
+              Follow its progress
+            </Link>
+          </>
+        )}
       </p>
 
       <div className="flex gap-3">
