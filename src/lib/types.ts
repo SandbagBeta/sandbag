@@ -104,6 +104,8 @@ export interface Scan {
   tri_count: number | null;
   texture_res: number | null;
   qc_report: QcReport | null;
+  /** The failed or rejected scan this one replaces; set server-side (#17). */
+  retry_of: string | null;
   capture_app: string | null;
   captured_at: string | null;
   license: "CC-BY-SA-4.0";
@@ -227,4 +229,14 @@ export interface Notification {
   created_at: string;
   /** Null until the user marks it read. */
   read_at: string | null;
+}
+
+/** One row of a scan's status timeline (issue #17). Written by a trigger. */
+export interface ScanStatusEvent {
+  id: string;
+  scan_id: string;
+  /** Null for the creation row. */
+  from_status: LifecycleStatus | null;
+  to_status: LifecycleStatus;
+  created_at: string;
 }
