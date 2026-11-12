@@ -24,20 +24,23 @@ Climbers scan boulders with their phones, upload the renders, and annotate them 
 
 Prereqs: Node 24+, pnpm, and, for the database, Docker plus the [Supabase CLI](https://supabase.com/docs/guides/cli). No global CLI? Use `npx supabase` wherever this page says `supabase`.
 
-**Just want to see the app?** Skip Supabase. `pnpm install && pnpm dev` is enough for the landing page and `/api/health` (it reports `"supabase": "unconfigured"`); sign-in, upload, review and anything database-backed need the stack below. On a fresh clone, install takes about 35 seconds and the dev server is ready in seconds. The first `supabase start` also downloads the Docker images, which depends on your connection.
+**Just want to see the app?** Skip Supabase. `pnpm install && pnpm dev` is enough for the landing page and `/api/health` (it reports `"supabase": "unconfigured"`); sign-in, upload, review and anything database-backed need the stack below. Measured on a fresh clone (Windows 11, Node 24, pnpm 10, Docker with the Supabase images already cached): `pnpm install` about 38 seconds, `supabase start` about 40 seconds (it applies every migration and creates the buckets), `pnpm seed` 2 seconds, dev server ready in about 5 seconds: roughly a minute and a half of command time, plus the minute it takes to paste four values into `.env.local`. The very first `supabase start` on a machine also downloads the Docker images, which depends on your connection and is not included in those numbers.
 
 ```bash
 git clone https://github.com/sandbagbeta/sandbag && cd sandbag
 pnpm install
 supabase start               # local Postgres/Auth/Storage stack (needs Docker)
 cp .env.example .env.local   # then paste the keys printed by `supabase start`
-                             # (`supabase status` reprints them any time)
+                             # (`supabase status -o env` reprints them any time: use API_URL, ANON_KEY and
+                             # SERVICE_ROLE_KEY. Also set LOCATION_FUZZ_SECRET, see below)
 pnpm seed                    # demo GLB + 1 scan, 2 climbs, holds, paths
                              # (needs SUPABASE_SERVICE_ROLE_KEY from the same output)
 pnpm dev                     # http://localhost:3000
 ```
 
 Also set `LOCATION_FUZZ_SECRET` in `.env.local` (generate one with `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`). Without it, areas flagged as fuzzed are served as hidden, by design (access privacy fails closed), so a missing secret looks like missing map data rather than an error.
+
+**Already running another Supabase project?** Two stacks can't share ports or a `project_id`. In `supabase/config.toml` change `project_id` and every `port` / `shadow_port` (the defaults are 54320 to 54329) to unused values, and use the new API URL in `.env.local`. Don't commit that change. Stop only your copy with `supabase stop` run from this checkout.
 
 Check the wiring at <http://localhost:3000/api/health> — it reports `"supabase": "configured"` once `.env.local` is filled in. `supabase/config.toml` declares three storage buckets: `uploads` (private, raw contributor scans), `published` (public, QC-approved GLBs) and `originals` (private, raw files of published scans); `supabase start` creates them. `supabase start` also applies `supabase/migrations/`. Run the database tests with `supabase test db`. The QC recovery sweep (retries, lost jobs) needs two Vault secrets so the database can call the app; see [supabase/README.md](supabase/README.md#qc-job-queue).
 
