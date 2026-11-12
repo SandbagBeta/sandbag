@@ -10,8 +10,8 @@ const AnnotateViewer = dynamic(
   { ssr: false },
 );
 
-/** Annotation needs a mouse and room for the toolbar. */
-const DESKTOP = "(min-width: 768px) and (pointer: fine)";
+/** Placement works by tap; only very narrow screens fall back to read-only. */
+const DESKTOP = "(min-width: 360px)";
 
 const subscribe = (cb: () => void) => {
   const mq = window.matchMedia(DESKTOP);
@@ -32,7 +32,7 @@ export interface AnnotateEditorProps {
   children?: ReactNode;
 }
 
-/** Hold editor on desktop; the read-only climb explorer everywhere else. */
+/** Hold editor (desktop and phones); read-only explorer below 360px. */
 export function AnnotateEditor({
   src,
   label,
@@ -57,7 +57,7 @@ export function AnnotateEditor({
         holds={holds}
         paths={paths}
       >
-        Hold annotation is available on desktop; this is the read-only view.
+        Hold annotation needs a wider screen; this is the read-only view.
         {children}
       </ClimbExplorer>
     );

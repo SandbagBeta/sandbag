@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { ClimbPath, Hold, HoldType, PathKind, Vec3 } from "@/lib/types";
+import { isFoot, sequenceHolds } from "./pathDraw";
 
 /**
  * Annotation editor state (issue #21): holds, paths and climb meta with
@@ -16,7 +17,7 @@ export interface ClimbMeta {
   fa_info: string;
 }
 
-interface Snapshot {
+export interface Snapshot {
   holds: Hold[];
   paths: ClimbPath[];
   meta: ClimbMeta;
@@ -43,6 +44,8 @@ export type EditorAction =
   | { type: "reorder"; id: string; toIndex: number }
   | { type: "setPath"; id: string; kind: PathKind; points: Vec3[] }
   | { type: "setMeta"; meta: Partial<ClimbMeta> }
+  /** Replaces the whole edit (draft restore/discard); clears history. */
+  | { type: "restore"; snapshot: Snapshot }
   | { type: "undo" }
   | { type: "redo" };
 
@@ -78,8 +81,17 @@ const snapshot = (s: EditorState): Snapshot => ({
   meta: s.meta,
 });
 
-const renumber = (holds: Hold[]): Hold[] =>
-  holds.map((h, i) => (h.seq_order === i ? h : { ...h, seq_order: i }));
+/**
+ * Sequence numbers run 0..n-1 over the non-foot holds in array order; feet are
+ * unordered single points and carry seq_order null.
+ */
+const renumber = (holds: Hold[]): Hold[] => {
+  let n = 0;
+  return holds.map((h) => {
+    const want = isFoot(h) ? null : n++;
+    return (h.seq_order ?? null) === want ? h : { ...h, seq_order: want };
+  });
+};
 
 /** The edited snapshot, or null when the action is a no-op (unknown id etc). */
 function apply(s: EditorState, a: EditorAction): Snapshot | null {
@@ -97,7 +109,8 @@ function apply(s: EditorState, a: EditorAction): Snapshot | null {
             scan_content_hash: s.scanContentHash,
             ...a.at,
             type: a.holdType,
-            seq_order: s.holds.length,
+            seq_order:
+              a.holdType === "foot" ? null : sequenceHolds(s.holds).length,
           },
         ],
       };
@@ -111,8 +124,8 @@ function apply(s: EditorState, a: EditorAction): Snapshot | null {
       if (!has(a.id)) return null;
       return {
         ...base,
-        holds: s.holds.map((h) =>
-          h.id === a.id ? { ...h, type: a.holdType } : h,
+        holds: renumber(
+          s.holds.map((h) => (h.id === a.id ? { ...h, type: a.holdType } : h)),
         ),
       };
     case "delete":
@@ -122,12 +135,13 @@ function apply(s: EditorState, a: EditorAction): Snapshot | null {
         holds: renumber(s.holds.filter((h) => h.id !== a.id)),
       };
     case "reorder": {
-      const from = s.holds.findIndex((h) => h.id === a.id);
-      const to = Math.max(0, Math.min(s.holds.length - 1, a.toIndex));
+      // Indexes address the sequence (non-foot holds); feet never move in it.
+      const seq = sequenceHolds(s.holds);
+      const from = seq.findIndex((h) => h.id === a.id);
+      const to = Math.max(0, Math.min(seq.length - 1, a.toIndex));
       if (from < 0 || to === from) return null;
-      const holds = [...s.holds];
-      holds.splice(to, 0, holds.splice(from, 1)[0]!);
-      return { ...base, holds: renumber(holds) };
+      seq.splice(to, 0, seq.splice(from, 1)[0]!);
+      return { ...base, holds: renumber([...seq, ...s.holds.filter(isFoot)]) };
     }
     case "setPath": {
       const rest = s.paths.filter((p) => p.kind !== a.kind);
@@ -150,6 +164,8 @@ export function editorReducer(
   state: EditorState,
   action: EditorAction,
 ): EditorState {
+  if (action.type === "restore")
+    return { ...state, ...action.snapshot, past: [], future: [] };
   if (action.type === "undo") {
     const prev = state.past[state.past.length - 1];
     if (!prev) return state;
@@ -193,6 +209,8 @@ export interface EditorStore extends EditorState {
   setMeta: (meta: Partial<ClimbMeta>) => void;
   undo: () => void;
   redo: () => void;
+  /** Replaces holds, paths and meta (draft restore/discard); clears history. */
+  restore: (snapshot: Snapshot) => void;
 }
 
 /** One store per edit session; `init` carries the scan's content hash. */
@@ -223,5 +241,6 @@ export const createEditorStore = (init: EditorInit) =>
       setMeta: (meta) => dispatch({ type: "setMeta", meta }),
       undo: () => dispatch({ type: "undo" }),
       redo: () => dispatch({ type: "redo" }),
+      restore: (snapshot) => dispatch({ type: "restore", snapshot }),
     };
   });

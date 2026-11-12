@@ -15,6 +15,25 @@ export interface SaveFormState {
   fa_info: string;
 }
 
+/**
+ * Feet are unordered single points (seq_order null); every other hold is
+ * numbered 0..n-1 in sequence order, so the line is built from them only.
+ */
+function sequencePayload(holds: Hold[]) {
+  const seq = holds
+    .filter((h) => h.type !== "foot")
+    .sort((a, b) => (a.seq_order ?? 0) - (b.seq_order ?? 0));
+  const order = new Map(seq.map((h, i) => [h.id, i]));
+  return holds.map((h) => ({
+    id: h.id,
+    position: h.position,
+    normal: h.normal,
+    face_index: h.face_index,
+    type: h.type,
+    seq_order: order.get(h.id) ?? null,
+  }));
+}
+
 export function buildSavePayload(input: {
   scanId: string;
   scanContentHash: string;
@@ -31,14 +50,7 @@ export function buildSavePayload(input: {
     description: meta.description.trim(),
     proposedGrade: meta.proposed_grade,
     faInfo: fa === "" ? null : fa,
-    holds: input.holds.map((h) => ({
-      id: h.id,
-      position: h.position,
-      normal: h.normal,
-      face_index: h.face_index,
-      type: h.type,
-      seq_order: h.seq_order,
-    })),
+    holds: sequencePayload(input.holds),
     paths: input.paths.map((p) => ({ kind: p.kind, points: p.points })),
   };
 }
@@ -63,6 +75,28 @@ interface Failure {
   code: string;
   message: string;
   issues?: AnnotationIssue[];
+}
+
+/**
+ * Plain-language text for issues about feet. Feet are optional and unordered,
+ * so they never count toward the 3 holds. `foot_in_sequence` comes from the
+ * server validator (code not yet in the shared union, hence the string compare).
+ */
+export function plainIssue(i: AnnotationIssue): AnnotationIssue {
+  const code: string = i.code;
+  if (code === "foot_in_sequence")
+    return {
+      ...i,
+      message:
+        "A foot hold was given a sequence number. Feet are optional single points, not part of the line. Remove it from the sequence and save again.",
+    };
+  if (code === "too_few_holds")
+    return {
+      ...i,
+      message:
+        "Add at least 3 start, hand or finish holds. Foot holds are optional and do not count.",
+    };
+  return i;
 }
 
 export function describeSaveFailure(f: Failure): SaveFailureView {
@@ -94,7 +128,7 @@ export function describeSaveFailure(f: Failure): SaveFailureView {
         "retry",
       );
     case "validation": {
-      const issues = f.issues ?? [];
+      const issues = (f.issues ?? []).map(plainIssue);
       const name = issues.find(
         (i) => i.code === "name_empty" || i.code === "name_duplicate",
       );

@@ -23,6 +23,8 @@ export interface SaveFormProps {
   onMeta: (meta: Partial<ClimbMeta>) => void;
   /** Point at a hold the server flagged. */
   onSelect: (id: string) => void;
+  /** Called after a successful save, before navigating (clears the draft). */
+  onSaved?: () => void;
 }
 
 const field =
@@ -53,6 +55,7 @@ export function SaveForm(p: SaveFormProps) {
         );
         if (result.ok) {
           setFailure(null);
+          p.onSaved?.();
           router.push(`/boulder/${p.scanId}?submitted=1`);
           return;
         }
