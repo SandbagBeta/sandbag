@@ -24,7 +24,8 @@
     "seed": "tsx scripts/seed.mjs",
     "fixtures:generate": "node scripts/generate-demo-boulder.mjs",
     "fixtures:qc": "node scripts/generate-qc-fixtures.mjs",
-    "openbeta:smoke": "node scripts/openbeta-smoke.mjs"
+    "openbeta:smoke": "node scripts/openbeta-smoke.mjs",
+    "export:dataset": "tsx scripts/export-dataset.mjs"
   },
   "dependencies": {
     "@gltf-transform/core": "4.5.1",
