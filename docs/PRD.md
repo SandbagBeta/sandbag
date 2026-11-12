@@ -221,11 +221,11 @@ Row-level security: contributors edit their own pending items (holds and paths o
 
 ## 13. Milestones (summary — full breakdown in PLAN.md)
 
-| # | Milestone | Outcome |
-|---|---|---|
-| M0 | Foundation | Repo, CI, Next.js + Supabase skeleton deployed, schema v1 |
-| M1 | Viewer | GLB loads in r3f viewer from Storage; demo scan hardcoded |
-| M2 | Upload + QC | Auth, upload flow, conversion/QC pipeline, review queue |
-| M3 | Annotation | Hold placement, lines, climb lifecycle, grade votes |
-| M4 | OpenBeta + browse | Area/boulder pages, search, attach flow, access safety |
-| M5 | Launch | Seed 10 scans, polish, docs, dataset export, community posts |
+| # | Milestone | Outcome | Status (2026-11-12) |
+|---|---|---|---|
+| M0 | Foundation | Repo, CI, Next.js + Supabase skeleton deployed, schema v1 | Done. Open: #7 (claude-code-action) |
+| M1 | Viewer | GLB loads in r3f viewer from Storage; demo scan hardcoded | Done. Open: #13 (LOD / progressive loading decision) |
+| M2 | Upload + QC | Auth, upload flow, conversion/QC pipeline, review queue | Partly done. Auth, upload, review queue, lifecycle, QC report UI and the job queue are in. The QC pipeline is not: only its parsers and checks have landed (#16 PR 1 of 3); the QC route and canonical-GLB output are not built, so upload to review does not work end to end yet |
+| M3 | Annotation | Hold placement, lines, climb lifecycle, grade votes | Backend done (validation, atomic save, staleness, unique names, grade votes, climb review). Open: #22 (the save UI) |
+| M4 | OpenBeta + browse | Area/boulder pages, search, attach flow, access safety | Done |
+| M5 | Launch | Seed 10 scans, polish, docs, dataset export, community posts | In progress. Done: per-boulder export, dataset export (needs repo variables for the weekly run), capture guide, landing page. Open: #35 seed data, #37 timed self-host check, #50 R2 (Part 1 adapter in review; the R2 driver waits for a custom domain), #39 launch posts, #38 v2 spike |
