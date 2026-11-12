@@ -31,7 +31,7 @@ export interface BoulderExportInput {
   exportedAt: string;
 }
 
-const LICENSE_TEXT = `This data is licensed under Creative Commons Attribution-ShareAlike 4.0
+export const LICENSE_TEXT = `This data is licensed under Creative Commons Attribution-ShareAlike 4.0
 International (CC BY-SA 4.0): https://creativecommons.org/licenses/by-sa/4.0/legalcode
 
 You must credit the contributors listed in ATTRIBUTION.txt and license any
