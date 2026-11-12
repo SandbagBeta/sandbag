@@ -9,12 +9,7 @@ import {
   useState,
 } from "react";
 import { useThree } from "@react-three/fiber";
-import {
-  Raycaster,
-  Vector2,
-  Vector3,
-  type Camera,
-} from "three";
+import { Raycaster, Vector2, Vector3, type Camera } from "three";
 import { useStore } from "zustand";
 import type { MeshSurface } from "@/lib/annotations";
 import type { HoldType, Vec3 } from "@/lib/types";
