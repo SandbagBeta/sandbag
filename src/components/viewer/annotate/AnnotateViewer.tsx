@@ -22,10 +22,14 @@ import {
   type DrawState,
 } from "./pathDraw";
 import { SaveForm } from "./SaveForm";
+import { DraftNotice } from "./DraftNotice";
 import { SequencePanel } from "./SequencePanel";
+import { useDraft } from "./useDraft";
 
 /** Screen-space radius (px) within which a pointer-down grabs a hold. */
 const GRAB_PX = 16;
+/** Fingers are coarser than a mouse pointer. */
+const GRAB_PX_TOUCH = 28;
 
 type Store = ReturnType<typeof createEditorStore>;
 type Drag = { id: string; to: HoldPlacement | null };
@@ -68,6 +72,7 @@ export function AnnotateViewer({
     : null;
   const { retype, remove, undo, redo, reorder, setMeta, setPath } =
     store.getState();
+  const draft = useDraft(store, scanId, scanContentHash);
 
   // Enter commits the drawn path, Escape discards it.
   useEffect(() => {
@@ -119,6 +124,7 @@ export function AnnotateViewer({
         hasPath={(k: DrawKind) => paths.some((p) => p.kind === k)}
         onSelect={setSelected}
         onReorder={reorder}
+        onRemove={remove}
         onName={(name) => setMeta({ name })}
         onDraw={(kind) => drawDispatch({ type: "start", kind })}
         onClearPath={(kind) => setPath(kind, [])}
@@ -132,9 +138,15 @@ export function AnnotateViewer({
             meta={meta}
             onMeta={setMeta}
             onSelect={setSelected}
+            onSaved={draft.clear}
           />
         )}
       </SequencePanel>
+      <DraftNotice
+        notice={draft.notice}
+        onDiscard={draft.discard}
+        onDismiss={draft.dismiss}
+      />
       <AnnotateControls
         activeType={activeType}
         onTypeChange={setActiveType}
@@ -235,6 +247,7 @@ function AnnotateScene({
         : null;
     };
     const grab = (e: PointerEvent, camera: Camera): string | null => {
+      const grabPx = e.pointerType === "touch" ? GRAB_PX_TOUCH : GRAB_PX;
       const r = el.getBoundingClientRect();
       let best: { id: string; d: number } | null = null;
       for (const h of store.getState().holds) {
@@ -243,7 +256,7 @@ function AnnotateScene({
           r.left + ((tmp.x + 1) / 2) * r.width - e.clientX,
           r.top + ((1 - tmp.y) / 2) * r.height - e.clientY,
         );
-        if (d <= GRAB_PX && (!best || d < best.d)) best = { id: h.id, d };
+        if (d <= grabPx && (!best || d < best.d)) best = { id: h.id, d };
       }
       return best?.id ?? null;
     };

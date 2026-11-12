@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { Hold } from "@/lib/types";
 import { HOLD_STYLE } from "../holds/holdStyle";
+import { sequenceHolds } from "./pathDraw";
 
 export interface SequenceListProps {
   holds: Hold[];
@@ -11,7 +12,7 @@ export interface SequenceListProps {
   onReorder: (id: string, toIndex: number) => void;
 }
 
-/** Keyboard-accessible hold order: up/down buttons, or drag a row. */
+/** Keyboard-accessible hold order (feet excluded): up/down buttons, or drag a row. */
 export function SequenceList({
   holds,
   selectedId,
@@ -19,13 +20,16 @@ export function SequenceList({
   onReorder,
 }: SequenceListProps) {
   const [dragId, setDragId] = useState<string | null>(null);
-  const ordered = [...holds].sort(
-    (a, b) => (a.seq_order ?? 0) - (b.seq_order ?? 0),
-  );
+  const ordered = sequenceHolds(holds);
   const btn =
     "rounded px-1.5 text-sm hover:bg-stone-200 focus-visible:outline-2 disabled:opacity-30 dark:hover:bg-stone-800";
   if (!ordered.length)
-    return <p className="text-sm">Click the boulder to add holds.</p>;
+    return (
+      <p className="text-sm">
+        Tap or click the boulder to add holds. Feet are optional and listed
+        separately.
+      </p>
+    );
   return (
     <ol aria-label="Hold sequence" className="space-y-1">
       {ordered.map((h, i) => (
