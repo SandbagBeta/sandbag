@@ -4,6 +4,7 @@ import { useCallback, useId, useMemo, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import type { Climb, ClimbPath, Hold } from "@/lib/types";
 import { ClimbInfo, ClimbList, parseClimbParam } from "./ClimbPanel";
+import { MarkerSizeSlider } from "../holds/markerSize";
 import { ViewerLegend } from "./ViewerLegend";
 
 // WebGL only, and keeps three.js out of the initial chunk.
@@ -106,6 +107,7 @@ export function ClimbExplorer({
           onSelect={select}
         />
         <ClimbInfo climb={climb} holds={climbHolds} paths={climbPaths} />
+        <MarkerSizeSlider />
         <ViewerLegend />
       </aside>
     </div>

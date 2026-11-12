@@ -2,13 +2,21 @@
 
 import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useThree } from "@react-three/fiber";
-import { Raycaster, Vector2, Vector3, type Camera } from "three";
+import {
+  DoubleSide,
+  Raycaster,
+  Vector2,
+  Vector3,
+  type Camera,
+  type Mesh,
+} from "three";
 import { useStore } from "zustand";
 import type { MeshSurface } from "@/lib/annotations";
 import type { HoldType, Vec3 } from "@/lib/types";
 import { BoulderViewer, type BoulderViewerProps } from "../BoulderViewer";
 import { ClimbLine } from "../holds/ClimbLine";
 import { HoldMarkers } from "../holds/HoldMarkers";
+import { useMarkerScale } from "../holds/markerSize";
 import { useScanGLTF } from "../loaders";
 import { AnnotateControls } from "./AnnotateControls";
 import { createEditorStore, type HoldPlacement } from "./editorStore";
@@ -217,6 +225,20 @@ function AnnotateScene({
     };
   });
   useEffect(() => onMesh(buildMeshSurface(scan)), [scan, onMesh]);
+  // Scans are one-sided: from behind, back faces are culled and the wall looks
+  // missing. DoubleSide is a material flag only; geometry (and so the indirect
+  // BVH's face numbering) is untouched.
+  useEffect(() => {
+    scan.traverse((o) => {
+      const mats = (o as Mesh).material;
+      for (const m of Array.isArray(mats) ? mats : mats ? [mats] : []) {
+        m.side = DoubleSide;
+        m.needsUpdate = true;
+      }
+    });
+    invalidate();
+  }, [scan, invalidate]);
+  const markerScale = useMarkerScale();
   const line = useMemo(
     () => sequenceLine(holds, store.getState().climbId),
     [holds, store],
@@ -247,7 +269,7 @@ function AnnotateScene({
       );
       ray.setFromCamera(ndc, camera);
       const hit = ray.intersectObject(scan, true)[0];
-      const p = hit && pickFromHit(hit, offsets);
+      const p = hit && pickFromHit(hit, offsets, ray.ray.direction);
       return p
         ? { position: p.position, normal: p.normal, face_index: p.faceIndex }
         : null;
@@ -334,7 +356,7 @@ function AnnotateScene({
       )}
       {selected && (
         <mesh position={selected.position}>
-          <sphereGeometry args={[0.05, 16, 12]} />
+          <sphereGeometry args={[0.05 * markerScale, 16, 12]} />
           <meshBasicMaterial color="#f0e442" wireframe />
         </mesh>
       )}

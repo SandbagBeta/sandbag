@@ -96,6 +96,24 @@ describe("pickFromHit", () => {
     expect(Math.max(...xs) + centre[0]!).toBeCloseTo(11);
   });
 
+  it("flips the normal toward the viewer when the hit is on a back face", () => {
+    const { root } = threeScene();
+    const offsets = buildFaceOffsets(root);
+    // Mesh A's triangles face +z. Front hit: ray travels -z; back hit: +z.
+    const front = new Raycaster(
+      new Vector3(0.8, 0.2, 5),
+      new Vector3(0, 0, -1),
+    );
+    const fh = front.intersectObject(root, true)[0]!;
+    expect(
+      pickFromHit(fh, offsets, front.ray.direction)!.normal[2],
+    ).toBeCloseTo(1);
+    const back = new Raycaster(new Vector3(0.8, 0.2, -5), new Vector3(0, 0, 1));
+    // Same face, seen from behind (the default material would cull this hit).
+    const flipped = pickFromHit(fh, offsets, back.ray.direction)!;
+    expect(flipped.normal[2]).toBeCloseTo(-1);
+  });
+
   it("first mesh keeps its local index", () => {
     const { root } = threeScene();
     const hit = new Raycaster(

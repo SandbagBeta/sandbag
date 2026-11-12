@@ -2,7 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { submitReview } from "@/lib/lifecycle";
-import { decideReview, type DecideResult } from "@/lib/review/decide";
+import { redirect } from "next/navigation";
+import {
+  decideReview,
+  reviewRedirect,
+  type DecideResult,
+} from "@/lib/review/decide";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 
@@ -41,6 +46,11 @@ export async function submitReviewAction(
       checked: formData.getAll("checked").map(String),
     },
   );
-  if (result.ok) revalidatePath("/review", "layout");
+  if (result.ok) {
+    revalidatePath("/review", "layout");
+    // Outside any try/catch: redirect() throws by design.
+    const to = reviewRedirect(formData.get("verdict"));
+    if (to) redirect(to);
+  }
   return result;
 }

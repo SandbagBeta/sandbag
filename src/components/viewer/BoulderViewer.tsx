@@ -9,6 +9,7 @@ import { ViewerErrorBoundary } from "./ViewerErrorBoundary";
 import { LoadingOverlay } from "./LoadingOverlay";
 import { clearScanGLTF } from "./loaders";
 import type { CameraFit } from "./fitCamera";
+import { ScanDiagonalContext } from "./holds/markerSize";
 
 export interface BoulderViewerProps {
   /** Absolute http(s) or root-relative URL of a compressed GLB. */
@@ -79,7 +80,9 @@ export function BoulderViewer({
             ) : (
               <ScanModel src={src} controlsRef={controlsRef} onFit={setFit} />
             )}
-            {scene}
+            <ScanDiagonalContext.Provider value={fit ? fit.radius * 2 : null}>
+              {scene}
+            </ScanDiagonalContext.Provider>
           </Suspense>
           {fit && (
             <Grid

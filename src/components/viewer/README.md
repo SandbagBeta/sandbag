@@ -130,3 +130,18 @@ is derived from that order and drawn with `ClimbLine`. "Draw topout/downclimb"
 appends one surface point per click (`pathDraw.ts`), Enter commits, Escape
 cancels. `ValidationPanel` runs `validateClimbAnnotations` against the loaded
 mesh (`meshSurface.ts`) and lists issues inline. Nothing is saved yet.
+
+## Marker size and one-sided scans (issue #133)
+
+- Scans come in arbitrary file units, so marker geometry, surface offsets,
+  line lift and dash lengths are multiplied by `markerScale(diagonal)`
+  (`holds/markerScale.ts`: bounding-box diagonal / 4 m, clamped 0.02 to 10).
+  `BoulderViewer` provides the diagonal inside the Canvas
+  (`ScanDiagonalContext`); `useMarkerScale()` adds the user's percentage.
+- The `Marker size` slider (`MarkerSizeSlider`, 50 to 200 %, default 100 %) is in
+  the viewer panel and the annotate builder. The value is kept in localStorage
+  (`sandbag:marker-size:v1`) best-effort.
+- Annotate sets scan materials to `DoubleSide` so the wall is visible from
+  behind. That is a material flag: geometry and the indirect BVH face numbering
+  are unchanged. A hit on a back face has its normal flipped toward the viewer.
+- The validation panel includes the proposed grade, since Save requires it.

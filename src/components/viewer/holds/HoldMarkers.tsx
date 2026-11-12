@@ -16,7 +16,12 @@ import {
   type InstancedMesh,
 } from "three";
 import type { Hold, HoldType } from "@/lib/types";
-import { groupHoldsByType, markerTransform } from "./holdMath";
+import {
+  groupHoldsByType,
+  HOLD_SURFACE_OFFSET,
+  markerTransform,
+} from "./holdMath";
+import { useMarkerScale } from "./markerSize";
 import {
   DIM_MIX,
   DIM_SCALE,
@@ -95,6 +100,7 @@ function HoldTypeInstances({
     [style.shape],
   );
   useEffect(() => () => geometry.dispose(), [geometry]);
+  const scale = useMarkerScale();
   const [hovered, setHovered] = useState(false);
   useCursor(hovered);
 
@@ -110,11 +116,14 @@ function HoldTypeInstances({
     holds.forEach((hold, i) => {
       const active =
         selectedClimbId === null || hold.climb_id === selectedClimbId;
-      const { position, quaternion } = markerTransform(hold);
+      const { position, quaternion } = markerTransform(
+        hold,
+        HOLD_SURFACE_OFFSET * scale,
+      );
       m.compose(
         p.fromArray(position),
         q.fromArray(quaternion),
-        s.setScalar(active ? 1 : DIM_SCALE),
+        s.setScalar((active ? 1 : DIM_SCALE) * scale),
       );
       mesh.setMatrixAt(i, m);
       mesh.setColorAt(i, active ? full : dim);
@@ -123,7 +132,7 @@ function HoldTypeInstances({
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     mesh.computeBoundingSphere(); // raycasting + frustum culling
     invalidate(); // frameloop="demand"
-  }, [holds, selectedClimbId, style.color, invalidate]);
+  }, [holds, selectedClimbId, style.color, scale, invalidate]);
 
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
     if (e.delta > CLICK_SLOP || e.instanceId === undefined) return;

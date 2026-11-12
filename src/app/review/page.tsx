@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { forbidden } from "next/navigation";
+import { reviewedBanner } from "@/lib/review/decide";
 import { loadPendingClimbs } from "@/lib/review/climbQueue";
 import { canReviewInUi, loadPendingScans } from "@/lib/review/queue";
 import { getReviewer } from "./session";
@@ -10,7 +11,13 @@ export const metadata: Metadata = {
   robots: { index: false },
 };
 
-export default async function ReviewQueuePage() {
+export default async function ReviewQueuePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ reviewed?: string | string[] }>;
+}) {
+  const { reviewed } = await searchParams;
+  const banner = reviewedBanner(reviewed);
   const { supabase, trust } = await getReviewer("/review");
   if (!canReviewInUi(trust)) forbidden();
   const [scans, climbs] = await Promise.all([
@@ -21,6 +28,14 @@ export default async function ReviewQueuePage() {
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-6 px-6 py-16">
       <h1 className="text-3xl font-bold tracking-tight">Review queue</h1>
+      {banner && (
+        <p
+          role="status"
+          className="rounded border border-emerald-700 bg-emerald-50 p-3 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-100"
+        >
+          Review submitted. {banner}
+        </p>
+      )}
       <h2 className="text-xl font-semibold">Scans</h2>
       {scans.length === 0 ? (
         <p className="text-stone-600 dark:text-stone-400">

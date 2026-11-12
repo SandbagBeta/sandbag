@@ -88,3 +88,20 @@ export async function decideReview(
   }
   return { ok: true, message: DONE[verdict] };
 }
+
+/**
+ * Approve and reject take the subject out of the pending queue, so its review
+ * page (which loads only pending subjects) would 404 on the next render.
+ * Those verdicts send the reviewer back to the queue with a confirmation
+ * (`?reviewed=<verdict>`); request_changes stays on the page.
+ */
+export function reviewRedirect(verdict: unknown): string | null {
+  return verdict === "approve" || verdict === "reject"
+    ? `/review?reviewed=${verdict}`
+    : null;
+}
+
+/** Banner text for the queue's `?reviewed=` param; null for anything else. */
+export function reviewedBanner(param: unknown): string | null {
+  return param === "approve" || param === "reject" ? DONE[param] : null;
+}

@@ -6,6 +6,7 @@ import type { Hold } from "@/lib/types";
 import type { DrawKind, DrawState } from "./pathDraw";
 import type { ClimbMeta } from "./editorStore";
 import { useState } from "react";
+import { MarkerSizeSlider } from "../holds/markerSize";
 import { FeetList } from "./FeetList";
 import { SequenceList } from "./SequenceList";
 import { ValidationPanel } from "./ValidationPanel";
@@ -76,6 +77,7 @@ export function SequencePanel(p: SequencePanelProps) {
             className="mt-1 block w-full rounded border border-stone-300 bg-transparent px-2 py-1 dark:border-stone-700"
           />
         </label>
+        <MarkerSizeSlider />
         <SequenceList
           holds={p.holds}
           selectedId={p.selectedId}
