@@ -25,10 +25,14 @@ export type PendingScan = Pick<
   "id" | "openbeta_area_id" | "tri_count" | "created_at" | "qc_report"
 > & { uploader_handle: string | null; qc_warnings: number };
 
-export type ReviewScan = PendingScan & { glb_path: string | null };
+export type ReviewScan = PendingScan & {
+  glb_path: string | null;
+  /** Reviewed scale (1 until a maintainer sets it): real size = GLB size * this. */
+  scale_factor: number;
+};
 
 const COLUMNS =
-  "id, uploader_id, openbeta_area_id, tri_count, created_at, qc_report, glb_path";
+  "id, uploader_id, openbeta_area_id, tri_count, created_at, qc_report, glb_path, scale_factor";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function countQcWarnings(report: QcReport | null): number {
@@ -54,6 +58,7 @@ function shape(r: Row, byId: Map<string, string>): ReviewScan {
   return {
     id: r.id,
     glb_path: r.glb_path,
+    scale_factor: r.scale_factor ?? 1,
     openbeta_area_id: r.openbeta_area_id,
     tri_count: r.tri_count,
     created_at: r.created_at,
