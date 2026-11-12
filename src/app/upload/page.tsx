@@ -30,7 +30,15 @@ export default async function UploadPage({
       <p className="text-stone-600 dark:text-stone-400">
         Export your scan as GLB, glTF or PLY, or zip an OBJ with its .mtl and
         textures. Up to 200 MB. Automated checks run after the upload, then a
-        reviewer takes a look. Uploads are shared under CC BY-SA 4.0.
+        reviewer takes a look. Uploads are shared under CC BY-SA 4.0. New to
+        scanning? Read the{" "}
+        <a
+          className="underline"
+          href="https://github.com/SandbagBeta/sandbag/blob/main/docs/capture-guide.md"
+        >
+          capture guide
+        </a>
+        .
       </p>
       <UploadForm
         userId={data.user.id}

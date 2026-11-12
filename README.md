@@ -60,6 +60,8 @@ http://127.0.0.1:54321/auth/v1/callback
 
 ### Uploading a scan
 
+New to scanning? Read the [capture guide](docs/capture-guide.md) first.
+
 `/upload` (sign-in required) takes a `.glb`, `.gltf`, `.ply`, or a `.zip` holding an `.obj` or `.gltf` with its textures, up to 200 MB. It creates a `scans` row (status `uploaded`), then sends the file to Supabase Storage over TUS resumable uploads in 6 MB chunks at `uploads/{user_id}/{scan_id}/raw/source.<ext>`. The original filename is never stored. A dropped connection retries with backoff, and reloading the page and picking the same file resumes from the last chunk. Code: `src/lib/upload/`, `src/app/upload/`.
 
 `/review` (maintainers only) lists scans and climbs in `pending_review`, oldest first. A pending climb opens at `/review/climb/<id>` with its proposed holds and line in the viewer (plus a text list) and an annotation checklist; the same form and `submitReview` flow publish or reject it. Each opens a preview with the QC report and the PRD §9 checklist; a verdict (approve, request changes, reject) writes the `reviews` row and moves the scan through the lifecycle module (`submitReview`), never an ad-hoc status write. Non-maintainers get a real HTTP 403 (`forbidden()` with `experimental.authInterrupts`, page at `src/app/forbidden.tsx`) and the server action refuses them too. A review inserts a `notifications` row (DB trigger); the author sees the verdict and reason at `/account/notifications` (unread count on `/account`). Email is v2. Request changes and reject need a reason. Code: `src/lib/review/`, `src/app/review/`.
