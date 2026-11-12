@@ -5,7 +5,7 @@
  */
 
 /** Bumped whenever a check, threshold or the pinned toolchain changes. */
-export const QC_PIPELINE_VERSION = "qc-1.1.0";
+export const QC_PIPELINE_VERSION = "qc-1.2.0";
 
 /** H2: raw file size cap (self-host / paid; hosted Free is 50 MB, ADR 002 D2). */
 export const MAX_RAW_BYTES = 200 * 1024 * 1024;
@@ -18,7 +18,7 @@ export const TRI_COUNT_LIMIT_HIGH = 5_000_000;
 export const SCALE_HARD_LOW_M = 0.3;
 export const SCALE_HARD_HIGH_M = 30;
 /** S3: inside the hard range but outside this one warns ("check the units"). */
-export const SCALE_SOFT_LOW_M = 0.5;
+export const SCALE_SOFT_LOW_M = 2;
 export const SCALE_SOFT_HIGH_M = 20;
 
 /** H7: enclosed volume below this fraction of the bounding-box volume fails. */

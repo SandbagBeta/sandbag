@@ -71,7 +71,9 @@ export type ReviewRefusal =
   /** takeDown only: trust_level must be maintainer. */
   | "not_maintainer"
   /** takeDown only: the subject must be published. */
-  | "not_published";
+  | "not_published"
+  /** setScanScale only: the factor is not a number in range. */
+  | "invalid_scale";
 
 export class ReviewNotAllowedError extends LifecycleError {
   constructor(

@@ -24,7 +24,11 @@ Scans are ordered by id, so two exports of the same data differ only in `exporte
 
 ### `manifest.json`
 
-`scans[]` entries: `id`, `directory`, `glb_file`, `content_hash`, `tri_count`, `texture_res`, `capture_app`, `captured_at`, `openbeta_area_id`, `openbeta_climb_id`, `climb_count`, `hold_count`. `counts` totals scans, climbs and holds.
+`scans[]` entries: `id`, `directory`, `glb_file`, `content_hash`, `tri_count`, `texture_res`, `scale_factor`, `capture_app`, `captured_at`, `openbeta_area_id`, `openbeta_climb_id`, `climb_count`, `hold_count`. `counts` totals scans, climbs and holds.
+
+### Scale
+
+GLBs are modelled in the units of the uploaded file, which can be wrong. A maintainer can set `scale_factor` (default `1`, range 0.001 to 1000) while a scan is in review. **Real size = size in the GLB * `scale_factor`.** `mesh.glb`, hold and path positions, `face_index` and `scan_content_hash` are always in the GLB's own frame and are never rescaled, so labels stay reproducible and match the hash. To get real distances, multiply by `scale_factor`. The field was added without bumping `schema_version` (additive); an export without it means `1`.
 
 ### Labels (`labels.jsonl`, `holds.json`)
 
