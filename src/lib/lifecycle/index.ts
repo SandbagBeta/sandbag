@@ -14,3 +14,4 @@ export * from "./apply";
 export * from "./qc-report";
 export * from "./review";
 export * from "./takedown";
+export * from "./scale";

@@ -120,6 +120,7 @@ export function buildDatasetFiles(
       content_hash: scan.content_hash,
       tri_count: scan.tri_count,
       texture_res: scan.texture_res,
+      scale_factor: scan.scale_factor,
       capture_app: scan.capture_app,
       captured_at: scan.captured_at,
       openbeta_area_id: scan.openbeta_area_id,

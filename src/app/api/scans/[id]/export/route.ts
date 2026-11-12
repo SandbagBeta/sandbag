@@ -19,7 +19,7 @@ export async function GET(
   const { data: scan } = await db
     .from("scans")
     .select(
-      "id, openbeta_area_id, openbeta_climb_id, status, glb_path, content_hash, tri_count, texture_res, capture_app, captured_at, license, uploader_id",
+      "id, openbeta_area_id, openbeta_climb_id, status, glb_path, content_hash, tri_count, texture_res, scale_factor, capture_app, captured_at, license, uploader_id",
     )
     .eq("id", id)
     .eq("status", "published")

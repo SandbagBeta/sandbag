@@ -39,12 +39,14 @@ describe("thresholds sit exactly where ADR 003 §8 puts them", () => {
     );
   });
 
-  it("H6 / S3 scale: hard outside 0.3–30 m, warning outside 0.5–20 m", () => {
+  it("H6 / S3 scale: hard outside 0.3–30 m, warning outside 2–20 m", () => {
     const s = (m: number) => outcome(checkScale([m, m / 2, m / 2]));
     expect(s(0.29)).toEqual([false, "error"]);
     expect(s(0.3)).toEqual([false, "warning"]);
-    expect(s(0.49)).toEqual([false, "warning"]);
-    expect(s(0.5)).toEqual([true, "error"]);
+    expect(s(1.99)).toEqual([false, "warning"]);
+    expect(s(0.5)).toEqual([false, "warning"]);
+    expect(s(1.5)).toEqual([false, "warning"]);
+    expect(s(2)).toEqual([true, "error"]);
     expect(s(20)).toEqual([true, "error"]);
     expect(s(20.1)).toEqual([false, "warning"]);
     expect(s(30)).toEqual([false, "warning"]);
@@ -61,7 +63,7 @@ describe("thresholds sit exactly where ADR 003 §8 puts them", () => {
     expect(checkScale([50_000, 5, 5]).message).toMatch(
       /Check the export units \(metres\) and crop/,
     );
-    expect(checkScale([0.4, 0.2, 0.2]).message).toMatch(/small for a boulder/);
+    expect(checkScale([1.5, 0.7, 0.7]).message).toMatch(/most are 2 m or more/);
     expect(checkScale([25, 5, 5]).message).toMatch(/large for a boulder/);
   });
 

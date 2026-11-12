@@ -1,6 +1,6 @@
 # Capture guide: how to scan a boulder well
 
-A good scan passes SandBag's automated checks the first time and makes holds easy to place. This page covers how to shoot, what to export, and how to fix the checks people hit most. The numbers come from `src/lib/qc/thresholds.ts` (QC pipeline `qc-1.1.0`); if they change, this page should change with them.
+A good scan passes SandBag's automated checks the first time and makes holds easy to place. This page covers how to shoot, what to export, and how to fix the checks people hit most. The numbers come from `src/lib/qc/thresholds.ts` (QC pipeline `qc-1.2.0`); if they change, this page should change with them.
 
 **Respect access and privacy.** Only scan boulders you are allowed to be at. Don't scan on closed or access-restricted land, and don't publish a location a landowner or local group asks you to keep private. SandBag never asks for GPS coordinates; leave location tagging off in your capture app and strip it from anything you share elsewhere. Location is attached by linking the scan to an OpenBeta area, and the app decides what is shown.
 
@@ -10,7 +10,7 @@ A good scan passes SandBag's automated checks the first time and makes holds eas
 | --- | --- | --- |
 | File | Not GLB, glTF, PLY, or a zip with an OBJ/glTF plus textures; or over 200 MB (50 MB on hosted Free) | |
 | Triangles | Under 10,000 or over 5,000,000 | |
-| Size | Longest side under 0.3 m or over 30 m | Under 0.5 m or over 20 m ("check the units") |
+| Size | Longest side under 0.3 m or over 30 m | Under 2 m or over 20 m (advisory: a reviewer checks the scale) |
 | Volume | Mesh is flat (almost no enclosed volume) | |
 | Floating pieces | 50% or more of the mesh is disconnected from the main piece | 20% or more |
 | Colour | No texture and no vertex colours | |
@@ -58,7 +58,7 @@ Scale: most phone apps export in metres. If your boulder reads as 0.01 m or 400 
 | --- | --- | --- |
 | "Only N triangles; we need at least 10,000" | Mesh is too low-poly | Re-export at higher mesh quality or detail |
 | "This scan is too large ... limit is 5M triangles" | Mesh is too dense | Simplify or decimate to under 5M and upload again |
-| Scale: "check the units" | Size outside 0.5-20 m (warn) or 0.3-30 m (fail) | Re-export in metres; check you scanned one boulder, not a whole area |
+| Scale: "check the units" | Size outside 2-20 m (warn) or 0.3-30 m (fail) | Re-export in metres; check you scanned one boulder, not a whole area |
 | "The mesh is flat (no volume)" | Only one side was captured | Re-shoot with full orbits, including low and high passes |
 | "disconnected floating pieces" | Debris, other objects, or ground fragments | Crop to the boulder in the app before export |
 | "no colour" or "texture image isn't in the upload" | Texture was off or missing | Export with textures on. For OBJ, zip the .obj, .mtl and texture images together, or export a GLB with the texture embedded |
