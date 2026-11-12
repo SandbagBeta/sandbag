@@ -320,6 +320,8 @@ Each step is its own PR, within ~400 lines where possible, and lands before the 
 2. **(b) Backend lifecycle PR** (lane:backend): add `failed_qc → processing` (server-side only, O3); add maintainer-only `published → rejected` with a recorded reason (O11; `rejected` stays final, O12); give `applyTransition` the typed, allowlisted QC column patch (O4); add the `QcReport` / `QcCheckResult` types to `src/lib/types.ts`.
 3. **(c) #16 implementation** (lane:3d), on top of (a) and (b): `src/lib/qc/` checks with the §8 thresholds, the golden fixtures and generator in `fixtures/qc/`, conversion, meshopt compression, location stripping, the thumbnail (rasterizer + `sharp` WebP), the route, the `enqueueQc` wiring, retry/backoff, and the PRD §7/§9 doc updates. Split it into several PRs if it passes the size target.
 
+**Status of step (c) (#16):** PR 1 (parsers, checks, golden set) and PR 2 (the route, `POST /api/qc/run`, and `src/lib/qc/worker.ts`) are done. PR 2 claims jobs, runs the checks and writes the verdict through the atomic `applyTransition` patch. It does not build, compress or upload the canonical GLB, so `pending_review` scans have `glb_path` and `content_hash` null and can't be published yet. PR 3 adds the canonical GLB (flow steps 4 to 5) and the thumbnail.
+
 ## Reproducing
 
 ```sh
