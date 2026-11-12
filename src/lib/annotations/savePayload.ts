@@ -1,5 +1,6 @@
 import { V_GRADES } from "../grades/vScale";
 import type { ClimbPath, Hold } from "../types";
+import { STAGE_LABELS, type FailureHelp } from "./failureHelp";
 import type { AnnotationIssue } from "./validate";
 
 /**
@@ -69,37 +70,95 @@ export interface SaveFailureView {
   /** Hold ids to point at (select in the sequence list). */
   holdIds: string[];
   issues: AnnotationIssue[];
+  /** What happened, what to do and (if logged) the reference. Always set. */
+  help: FailureHelp;
 }
 
 interface Failure {
   code: string;
   message: string;
   issues?: AnnotationIssue[];
+  /** From the server; a generic one is used when the action never answered. */
+  help?: FailureHelp;
+}
+
+/** Used when the action threw or the server sent no help (network error). */
+const OFFLINE_HELP: FailureHelp = {
+  stage: "unknown",
+  stageLabel: STAGE_LABELS.unknown,
+  userFixable: true,
+  whatHappened: "Your climb wasn't saved: we couldn't reach the server.",
+  whatYouCanDo: ["Check your connection, then press Save again."],
+  nextSteps: [],
+};
+
+/**
+ * Names holds the way the editor lists them, so messages can say "Hold 3" or
+ * "Foot 2" instead of an id. Hold numbers follow the sequence list (start,
+ * hand and finish holds by `seq_order`); feet are numbered in placement order.
+ */
+export function holdLabeler(holds: Hold[]): (id: string) => string {
+  const labels = new Map<string, string>();
+  holds
+    .filter((h) => h.type !== "foot")
+    .sort((a, b) => (a.seq_order ?? 0) - (b.seq_order ?? 0))
+    .forEach((h, i) => labels.set(h.id, `Hold ${i + 1}`));
+  holds
+    .filter((h) => h.type === "foot")
+    .forEach((h, i) => labels.set(h.id, `Foot ${i + 1}`));
+  return (id) => labels.get(id) ?? "A hold";
 }
 
 /**
- * Plain-language text for issues about feet. Feet are optional and unordered,
- * so they never count toward the 3 holds. `foot_in_sequence` comes from the
- * server validator (code not yet in the shared union, hence the string compare).
+ * Plain-language text for an annotation issue: no ids, face numbers or metres.
+ * Feet are optional and unordered, so they never count toward the 3 holds.
+ * `foot_in_sequence` comes from the server validator (code not yet in the
+ * shared union, hence the string compare).
  */
-export function plainIssue(i: AnnotationIssue): AnnotationIssue {
+export function plainIssue(
+  i: AnnotationIssue,
+  label: (id: string) => string = () => "A hold",
+): AnnotationIssue {
   const code: string = i.code;
-  if (code === "foot_in_sequence")
-    return {
-      ...i,
-      message:
-        "A foot hold was given a sequence number. Feet are optional single points, not part of the line. Remove it from the sequence and save again.",
-    };
-  if (code === "too_few_holds")
-    return {
-      ...i,
-      message:
+  const who = i.holdId ? label(i.holdId) : "A hold";
+  const say = (message: string) => ({ ...i, message });
+  switch (code) {
+    case "foot_in_sequence":
+      return say(
+        `${who} was given a sequence number. Feet are optional single points, not part of the line. Remove it from the sequence and save again.`,
+      );
+    case "too_few_holds":
+      return say(
         "Add at least 3 start, hand or finish holds. Foot holds are optional and do not count.",
-    };
-  return i;
+      );
+    case "duplicate_hold_id":
+      return say(`${who} is a duplicate. Remove it and place it again.`);
+    case "hash_mismatch":
+      return say(
+        `${who} was placed on an older version of the 3D model. Remove it and place it again.`,
+      );
+    case "face_out_of_range":
+      return say(
+        `${who} isn't on the model's surface. Drag it onto the rock, or remove it and place it again.`,
+      );
+    case "off_surface":
+      return say(
+        `${who} is too far from the rock surface. Drag it onto the rock.`,
+      );
+    case "bad_sequence":
+      return say(
+        "The hold order has a gap or a repeat. Move a hold up or down in the list to fix it.",
+      );
+    default:
+      return i;
+  }
 }
 
-export function describeSaveFailure(f: Failure): SaveFailureView {
+export function describeSaveFailure(
+  f: Failure,
+  label?: (id: string) => string,
+): SaveFailureView {
+  const help = f.help ?? OFFLINE_HELP;
   const view = (
     message: string,
     action: SaveFailureView["action"],
@@ -109,6 +168,7 @@ export function describeSaveFailure(f: Failure): SaveFailureView {
     fields: {},
     holdIds: [],
     issues: [],
+    help,
   });
   switch (f.code) {
     case "signed_out":
@@ -128,7 +188,7 @@ export function describeSaveFailure(f: Failure): SaveFailureView {
         "retry",
       );
     case "validation": {
-      const issues = (f.issues ?? []).map(plainIssue);
+      const issues = (f.issues ?? []).map((i) => plainIssue(i, label));
       const name = issues.find(
         (i) => i.code === "name_empty" || i.code === "name_duplicate",
       );
@@ -140,6 +200,7 @@ export function describeSaveFailure(f: Failure): SaveFailureView {
           ...new Set(issues.flatMap((i) => (i.holdId ? [i.holdId] : []))),
         ],
         issues,
+        help,
       };
     }
     default:

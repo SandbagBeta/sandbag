@@ -24,7 +24,9 @@ export interface SequencePanelProps {
   onName: (name: string) => void;
   onDraw: (kind: DrawKind) => void;
   onClearPath: (kind: DrawKind) => void;
-  /** Rendered below validation (the save form). */
+  /** Rendered under the live validation, above the scroll (save failures). */
+  alerts?: ReactNode;
+  /** Rendered at the end of the scrolling body (the save form). */
   children?: ReactNode;
 }
 
@@ -50,9 +52,21 @@ export function SequencePanel(p: SequencePanelProps) {
       >
         {open ? "Hide climb builder" : "Climb builder"}
       </button>
+      {/* Outside the scrolling body so problems are never buried below it. */}
+      <div
+        className={`max-h-[30dvh] space-y-2 overflow-y-auto max-md:mt-2 ${open ? "" : "max-md:hidden"} md:mb-3`}
+      >
+        <ValidationPanel
+          holds={p.holds}
+          meta={p.meta}
+          scanContentHash={p.scanContentHash}
+          mesh={p.mesh}
+        />
+        {p.alerts}
+      </div>
       <div
         id="climb-builder-body"
-        className={`max-h-[70dvh] space-y-3 overflow-y-auto max-md:mt-2 md:block md:max-h-[calc(100dvh-8rem)] ${open ? "" : "max-md:hidden"}`}
+        className={`max-h-[50dvh] space-y-3 overflow-y-auto max-md:mt-2 md:block md:max-h-[calc(100dvh-16rem)] ${open ? "" : "max-md:hidden"}`}
       >
         <label className="block text-sm">
           Name
@@ -103,12 +117,6 @@ export function SequencePanel(p: SequencePanelProps) {
             </p>
           )}
         </div>
-        <ValidationPanel
-          holds={p.holds}
-          meta={p.meta}
-          scanContentHash={p.scanContentHash}
-          mesh={p.mesh}
-        />
         {p.children}
       </div>
     </aside>

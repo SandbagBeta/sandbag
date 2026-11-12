@@ -22,6 +22,8 @@ import {
   type DrawKind,
   type DrawState,
 } from "./pathDraw";
+import type { SaveFailureView } from "@/lib/annotations/savePayload";
+import { SaveFailureAlert } from "./SaveFailureAlert";
 import { SaveForm } from "./SaveForm";
 import { DraftNotice } from "./DraftNotice";
 import { SequencePanel } from "./SequencePanel";
@@ -65,6 +67,7 @@ export function AnnotateViewer({
   const meta = useStore(store, (s) => s.meta);
   const [draw, drawDispatch] = useReducer(drawReducer, IDLE);
   const [mesh, setMesh] = useState<MeshSurface | null>(null);
+  const [failure, setFailure] = useState<SaveFailureView | null>(null);
   const [activeType, setActiveType] = useState<HoldType>("hand");
   const [rawSelected, setSelected] = useState<string | null>(null);
   // Undo can remove the selected hold: derive instead of syncing.
@@ -129,6 +132,7 @@ export function AnnotateViewer({
         onName={(name) => setMeta({ name })}
         onDraw={(kind) => drawDispatch({ type: "start", kind })}
         onClearPath={(kind) => setPath(kind, [])}
+        alerts={<SaveFailureAlert failure={failure} onSelect={setSelected} />}
       >
         {scanId && (
           <SaveForm
@@ -139,6 +143,7 @@ export function AnnotateViewer({
             meta={meta}
             onMeta={setMeta}
             onSelect={setSelected}
+            onFailure={setFailure}
             onSaved={draft.clear}
           />
         )}
