@@ -75,3 +75,7 @@ Migration `20261112000100_scan_status_history.sql` (issue #17).
 ## Attach note (freetext)
 
 Migration `20261112000200_scan_attach_notes.sql` (issue #28). `scan_attach_notes (scan_id, note, updated_at)`, one row per scan, for contributors who can't find their boulder or area in OpenBeta. It is a separate table on purpose: published `scans` rows are public in full, and free text can carry coordinates or directions to a sensitive spot. Only the uploader and reviewers can read it; `anon` has no privileges; the uploader writes it while the scan is `uploaded`, `failed_qc` or `pending_review`. `note` is 1-500 characters and a check refuses two decimal numbers in a row (a lat/lng pair). That regex is a backstop, not a guarantee: the app must also validate, must never show the note on public pages, and the per-boulder and dataset exports must not include it.
+
+## One path per kind
+
+Migration `20261112000400_paths_unique_kind.sql` (issue #22, gap D). `paths_climb_kind_unique` is `unique (climb_id, kind)`: a climb has at most one `line`, one `topout` and one `downclimb`, as the annotation editor already assumes. Existing duplicates are deleted first, keeping the newest per kind. `paths` has no timestamp, so "newest" is physical row order, which follows insertion for rows that were never updated. Writers must replace a path, not add another: the upcoming `create_climb_annotations` / `replace_climb_annotations` functions do this inside one transaction.
