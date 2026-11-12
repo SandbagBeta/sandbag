@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { editPath } from "@/lib/annotations/editClimb";
 import type { Review, ReviewVerdict } from "@/lib/types";
 
 /**
@@ -18,6 +19,8 @@ export interface NotificationView {
   reason: string | null;
   /** What the contributor can do next, by verdict. */
   message: string;
+  /** Where to edit the climb: set for "request changes" on a climb still waiting for review. */
+  editHref: string | null;
 }
 
 export function verdictMessage(
@@ -65,12 +68,20 @@ export async function loadNotifications(
     .filter((r) => r.reviews?.subject_type === "climb")
     .map((r) => r.reviews!.subject_id);
   const names = new Map<string, string>();
+  const editable = new Map<string, string>();
   if (climbIds.length) {
     const { data: climbs } = await db
       .from("climbs")
-      .select("id, name")
+      .select("id, name, scan_id, status")
       .in("id", climbIds);
-    for (const c of climbs ?? []) names.set(c.id as string, c.name as string);
+    for (const c of climbs ?? []) {
+      names.set(c.id as string, c.name as string);
+      if (c.status === "pending_review")
+        editable.set(
+          c.id as string,
+          editPath(c.scan_id as string, c.id as string),
+        );
+    }
   }
 
   return rows.map((r) => {
@@ -85,6 +96,10 @@ export async function loadNotifications(
       subjectName: name,
       reason: rv.reason,
       message: verdictMessage(rv.verdict, rv.subject_type, name),
+      editHref:
+        rv.verdict === "request_changes" && rv.subject_type === "climb"
+          ? (editable.get(rv.subject_id) ?? null)
+          : null,
     };
   });
 }

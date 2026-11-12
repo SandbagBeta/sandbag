@@ -16,6 +16,8 @@ import type { ClimbMeta } from "./editorStore";
 
 export interface SaveFormProps {
   scanId: string;
+  /** Set when editing a saved climb: Save replaces its holds and paths. */
+  climbId?: string | null;
   scanContentHash: string;
   holds: Hold[];
   paths: ClimbPath[];
@@ -51,6 +53,7 @@ export function SaveForm(p: SaveFormProps) {
         const result = await saveClimb(
           buildSavePayload({
             scanId: p.scanId,
+            climbId: p.climbId,
             scanContentHash: p.scanContentHash,
             meta: p.meta,
             holds: p.holds,
@@ -60,7 +63,9 @@ export function SaveForm(p: SaveFormProps) {
         if (result.ok) {
           p.onFailure(null);
           p.onSaved?.();
-          router.push(`/boulder/${p.scanId}?submitted=1`);
+          router.push(
+            `/boulder/${p.scanId}?${p.climbId ? "updated" : "submitted"}=1`,
+          );
           return;
         }
         view = describeSaveFailure(result, holdLabeler(p.holds));
@@ -116,7 +121,11 @@ export function SaveForm(p: SaveFormProps) {
         disabled={pending}
         className="w-full rounded bg-sky-700 px-3 py-1.5 text-white focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-60"
       >
-        {pending ? "Saving…" : "Save climb for review"}
+        {pending
+          ? "Saving…"
+          : p.climbId
+            ? "Save changes"
+            : "Save climb for review"}
       </button>
     </div>
   );

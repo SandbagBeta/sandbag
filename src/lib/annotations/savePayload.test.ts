@@ -46,6 +46,19 @@ describe("buildSavePayload", () => {
       ],
     });
 
+  it("sends climbId only when editing a saved climb", () => {
+    expect(payload().climbId).toBeNull();
+    const edit = buildSavePayload({
+      scanId: "s",
+      climbId: "00000000-0000-4000-8000-0000000000c1",
+      scanContentHash: hash,
+      meta,
+      holds: [],
+      paths: [],
+    });
+    expect(edit.climbId).toBe("00000000-0000-4000-8000-0000000000c1");
+  });
+
   it("trims text, nulls empty FA and drops draft ids", () => {
     const p = payload();
     expect(p.name).toBe("Warmup");

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { signOut } from "@/app/auth/actions";
 import { signInPath } from "@/lib/auth/gating";
+import { loadMyPendingClimbs } from "@/lib/annotations/editClimb";
 import { ensureProfile } from "@/lib/auth/profile";
 import { countUnread } from "@/lib/review/notifications";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -29,6 +30,7 @@ export default async function AccountPage({
   // Normally created in /auth/callback; retried here if that failed.
   const profile = await ensureProfile(supabase, data.user);
   const unread = await countUnread(supabase);
+  const pending = await loadMyPendingClimbs(supabase, data.user.id);
 
   return (
     <main className="mx-auto flex max-w-lg flex-col gap-8 px-6 py-20">
@@ -46,6 +48,26 @@ export default async function AccountPage({
             </p>
           )}
           <HandleForm handle={profile.handle} />
+        </section>
+      )}
+      {pending.length > 0 && (
+        <section
+          aria-labelledby="pending-heading"
+          className="flex flex-col gap-2"
+        >
+          <h2 id="pending-heading" className="text-xl font-semibold">
+            Your climbs waiting for review
+          </h2>
+          <ul className="flex flex-col gap-1">
+            {pending.map((c) => (
+              <li key={c.id}>
+                {c.name}{" "}
+                <Link href={c.href} className="underline">
+                  Edit
+                </Link>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
       <Link href="/account/notifications" className="underline">
