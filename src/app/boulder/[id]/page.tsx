@@ -83,7 +83,10 @@ export default async function BoulderPage({
   params: Params;
   searchParams: SearchParams;
 }) {
-  const [{ id }, { climb }] = await Promise.all([params, searchParams]);
+  const [{ id }, { climb, submitted }] = await Promise.all([
+    params,
+    searchParams,
+  ]);
   const boulder = await getBoulder(id);
   if (!boulder) notFound();
   const { data, title, description, src } = boulder;
@@ -150,7 +153,21 @@ export default async function BoulderPage({
             <div className="flex flex-wrap items-center gap-2">
               <ShareButton title={title} />
               <ExportLink scanId={data.scan.id} />
+              <Link
+                href={`/boulder/${data.scan.id}/annotate`}
+                className="inline-block rounded-md border border-stone-300 px-3 py-1.5 text-sm hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 dark:border-stone-700 dark:hover:bg-stone-800"
+              >
+                Add a climb
+              </Link>
             </div>
+            {submitted && (
+              <p
+                role="status"
+                className="rounded border border-emerald-700 p-2 text-sm text-emerald-800 dark:text-emerald-300"
+              >
+                Thanks. Your climb was submitted and will appear after review.
+              </p>
+            )}
           </header>
         }
       >

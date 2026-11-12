@@ -59,7 +59,9 @@ describe("boulder export", () => {
   it("round-trips: export then import yields identical data", () => {
     const parsed = parseBoulderExport(buildBoulderExport(input));
     expect(parsed.glb).toEqual(glb);
-    expect(parsed.climbs).toEqual(input.climbs);
+    const { created_by: _creator, ...exportedClimb } = climb;
+    void _creator;
+    expect(parsed.climbs).toEqual([exportedClimb]);
     expect(parsed.holds).toEqual(input.holds);
     expect(parsed.paths).toEqual(input.paths);
     expect(parsed.manifest.schema_version).toBe(1);
@@ -72,6 +74,23 @@ describe("boulder export", () => {
     );
     expect(attr.match(/- zed/g)).toHaveLength(1);
     expect(names.map((e) => e.name)).toContain("LICENSE.txt");
+  });
+
+  it("never writes a user id: created_by and unknown climb columns are dropped", () => {
+    const creator = "99999999-9999-4999-8999-999999999999";
+    const leaky = {
+      ...climb,
+      created_by: creator,
+      annotations_stale_at: "2026-11-11T00:00:00Z",
+      future_column: "x",
+    };
+    const zip = buildBoulderExport({ ...input, climbs: [leaky] });
+    for (const e of readZip(zip)) {
+      if (e.name.endsWith(".glb")) continue;
+      const text = new TextDecoder().decode(e.data);
+      expect(text).not.toContain(creator);
+      expect(text).not.toMatch(/created_by|annotations_stale_at|future_column/);
+    }
   });
 
   it("contains no geographic fields", () => {

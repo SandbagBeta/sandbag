@@ -13,6 +13,7 @@ export interface ClimbMeta {
   name: string;
   description: string;
   proposed_grade: string;
+  fa_info: string;
 }
 
 interface Snapshot {
@@ -59,7 +60,13 @@ export function initialEditorState(init: EditorInit): EditorState {
     scanContentHash: init.scanContentHash,
     holds: init.holds ?? [],
     paths: init.paths ?? [],
-    meta: { name: "", description: "", proposed_grade: "", ...init.meta },
+    meta: {
+      name: "",
+      description: "",
+      proposed_grade: "",
+      fa_info: "",
+      ...init.meta,
+    },
     past: [],
     future: [],
   };
