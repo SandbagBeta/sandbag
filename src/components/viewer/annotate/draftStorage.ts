@@ -1,4 +1,5 @@
 import type { ClimbPath, Hold } from "@/lib/types";
+import { HOLD_TYPES } from "../holds/holdStyle";
 import type { ClimbMeta, Snapshot } from "./editorStore";
 
 /**
@@ -53,7 +54,11 @@ function wellFormed(d: unknown): d is StoredDraft {
     typeof x.savedAt === "number" &&
     Array.isArray(x.holds) &&
     x.holds.every(
-      (h) => !!h && isStr(h.id) && isStr(h.type) && Array.isArray(h.position),
+      (h) =>
+        !!h &&
+        isStr(h.id) &&
+        HOLD_TYPES.includes(h.type) &&
+        Array.isArray(h.position),
     ) &&
     Array.isArray(x.paths) &&
     !!m &&
