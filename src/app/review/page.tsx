@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { forbidden } from "next/navigation";
 import { loadPendingClimbs } from "@/lib/review/climbQueue";
 import { canReviewInUi, loadPendingScans } from "@/lib/review/queue";
-import { Forbidden, getReviewer } from "./session";
+import { getReviewer } from "./session";
 
 export const metadata: Metadata = {
   title: "Review queue — SandBag",
@@ -11,7 +12,7 @@ export const metadata: Metadata = {
 
 export default async function ReviewQueuePage() {
   const { supabase, trust } = await getReviewer("/review");
-  if (!canReviewInUi(trust)) return <Forbidden />;
+  if (!canReviewInUi(trust)) forbidden();
   const [scans, climbs] = await Promise.all([
     loadPendingScans(supabase),
     loadPendingClimbs(supabase),

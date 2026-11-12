@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { forbidden, notFound } from "next/navigation";
 import { publishedGlbUrl } from "@/lib/boulder/load";
 import { CLIMB_CHECKLIST, loadReviewClimb } from "@/lib/review/climbQueue";
 import { canReviewInUi } from "@/lib/review/queue";
 import { getPublicSupabaseEnv } from "@/lib/supabase/env";
 import { ReviewForm } from "../../ReviewForm";
-import { Forbidden, getReviewer } from "../../session";
+import { getReviewer } from "../../session";
 import { ReviewClimbViewer } from "./ReviewClimbViewer";
 
 export const metadata: Metadata = {
@@ -21,7 +21,7 @@ export default async function ReviewClimbPage({
 }) {
   const { climbId } = await params;
   const { supabase, trust } = await getReviewer(`/review/climb/${climbId}`);
-  if (!canReviewInUi(trust)) return <Forbidden />;
+  if (!canReviewInUi(trust)) forbidden();
   const review = await loadReviewClimb(supabase, climbId);
   if (!review) notFound();
   const { climb, holds, paths } = review;
