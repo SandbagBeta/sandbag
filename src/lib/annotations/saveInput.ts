@@ -1,6 +1,6 @@
 import { gradeRank } from "../grades/vScale";
 import type { HoldType, PathKind, Vec3 } from "../types";
-import type { AnnotationIssue } from "./validate";
+import type { AnnotationIssue, UserField } from "./validate";
 
 /**
  * Untrusted payload of a climb save (issue #22). Parsed here, never cast: only
@@ -66,11 +66,14 @@ export type ParseResult =
 
 export function parseSaveClimbInput(raw: unknown): ParseResult {
   const issues: AnnotationIssue[] = [];
-  const bad = (message: string, holdId?: string) =>
+  // `field` marks a problem in something the user typed, which they can fix;
+  // without it the payload itself is wrong (an app bug, not the user's doing).
+  const bad = (message: string, holdId?: string, field?: UserField) =>
     issues.push({
       code: "bad_payload",
       message,
       ...(holdId ? { holdId } : {}),
+      ...(field ? { field } : {}),
     });
 
   if (!isObj(raw))
@@ -100,7 +103,11 @@ export function parseSaveClimbInput(raw: unknown): ParseResult {
 
   const name = typeof raw.name === "string" ? raw.name.trim() : "";
   if (name.length > LIMITS.name)
-    bad(`name must be at most ${LIMITS.name} characters.`);
+    bad(
+      `The name is too long: use at most ${LIMITS.name} characters.`,
+      undefined,
+      "name",
+    );
   const description =
     typeof raw.description === "string"
       ? raw.description.trim()
@@ -109,14 +116,20 @@ export function parseSaveClimbInput(raw: unknown): ParseResult {
         : null;
   if (description === null || description.length > LIMITS.description)
     bad(
-      `description must be text of at most ${LIMITS.description} characters.`,
+      `The description is too long: use at most ${LIMITS.description} characters.`,
+      undefined,
+      "description",
     );
   const proposedGrade =
     typeof raw.proposedGrade === "string"
       ? raw.proposedGrade.trim().toUpperCase()
       : "";
   if (gradeRank(proposedGrade) === null)
-    bad("proposedGrade must be a V-scale grade (VB, V0..V17).");
+    bad(
+      "Pick a V-scale grade from VB to V17 (for example V4).",
+      undefined,
+      "proposedGrade",
+    );
   const faInfo =
     raw.faInfo == null || raw.faInfo === ""
       ? null
@@ -127,7 +140,11 @@ export function parseSaveClimbInput(raw: unknown): ParseResult {
     faInfo === undefined ||
     (faInfo !== null && faInfo.length > LIMITS.faInfo)
   )
-    bad(`faInfo must be text of at most ${LIMITS.faInfo} characters.`);
+    bad(
+      `The first-ascent note is too long: use at most ${LIMITS.faInfo} characters.`,
+      undefined,
+      "faInfo",
+    );
 
   const holds: SaveHold[] = [];
   if (!Array.isArray(raw.holds) || raw.holds.length > LIMITS.holds) {

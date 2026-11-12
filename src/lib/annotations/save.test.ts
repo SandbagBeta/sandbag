@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import { MeshUnavailableError } from "./loadSurface";
-import { mapRpcError, saveClimbAnnotations, type SaveDeps } from "./save";
+import type { FailureLogEntry } from "./failureLog";
+import {
+  mapRpcError,
+  rejectPayload,
+  saveClimbAnnotations,
+  type SaveDeps,
+} from "./save";
 import { parseSaveClimbInput, type SaveClimbInput } from "./saveInput";
 
 vi.mock("server-only", () => ({}));
@@ -80,15 +86,19 @@ function deps(over: Partial<SaveDeps> = {}) {
     data: fn === "create_climb_annotations" ? CLIMB : null,
     error: null,
   }));
+  const log = vi.fn<(entry: FailureLogEntry) => Promise<boolean>>(
+    async () => true,
+  );
   const d: SaveDeps = {
     loadScan: async () => publishedScan,
     listClimbs: async () => [{ id: "other", name: "Other" }],
     loadClimb: async () => ownPending,
     loadSurface: async () => mesh,
     rpc: rpc as unknown as SaveDeps["rpc"],
+    logFailure: log,
     ...over,
   };
-  return { d, rpc };
+  return { d, rpc, log };
 }
 
 describe("parseSaveClimbInput", () => {
@@ -433,5 +443,206 @@ describe("mapRpcError", () => {
     expect(
       mapRpcError({ code: "XX000", message: "relation secret_table" }).message,
     ).not.toMatch(/secret/);
+  });
+});
+
+describe("failure help and the private log", () => {
+  const entryOf = (log: { mock: { calls: unknown[][] } }) =>
+    log.mock.calls[0]![0] as FailureLogEntry;
+
+  it("explains a failure the user can fix, and logs nothing", async () => {
+    const { d, log } = deps();
+    const r = await saveClimbAnnotations(
+      d,
+      USER,
+      parse({ holds: [hold("a", 1, "start", 0), hold("b", 2)] }),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.help).toMatchObject({
+      stage: "validation",
+      stageLabel: "Checking your holds and lines",
+      userFixable: true,
+    });
+    expect(r.help.whatYouCanDo.join(" ")).toMatch(/foot holds don't count/);
+    expect(r.help.nextSteps.length).toBeGreaterThan(0);
+    expect(r.help.reference).toBeUndefined();
+    expect(r.help.reportPath).toBeUndefined();
+    expect(log).not.toHaveBeenCalled();
+  });
+
+  it("treats a changed mesh as the user's to fix: reload and re-place", async () => {
+    const { d, log } = deps({
+      loadScan: async () => ({
+        ...publishedScan,
+        content_hash: "b".repeat(64),
+      }),
+    });
+    const r = await saveClimbAnnotations(d, USER, parse());
+    expect(r).toMatchObject({ ok: false, code: "stale" });
+    if (!r.ok) {
+      expect(r.help).toMatchObject({ stage: "scan", userFixable: true });
+      expect(r.help.whatYouCanDo.join(" ")).toMatch(/Reload/);
+    }
+    expect(log).not.toHaveBeenCalled();
+  });
+
+  it.each<[string, Partial<SaveDeps>, string, string]>([
+    [
+      "the scan isn't available",
+      { loadScan: async () => null },
+      "not_found",
+      "scan",
+    ],
+    [
+      "someone else's climb",
+      { loadClimb: async () => ({ ...ownPending, created_by: "x" }) },
+      "forbidden",
+      "access",
+    ],
+    [
+      "the mesh can't be loaded",
+      {
+        loadSurface: async () => {
+          throw new Error("storage said: bucket secret-name denied");
+        },
+      },
+      "mesh_unavailable",
+      "mesh",
+    ],
+    [
+      "the database fails on a lookup",
+      {
+        loadScan: async () => {
+          throw new Error("loading scan: connection refused 10.0.0.5");
+        },
+      },
+      "error",
+      "database",
+    ],
+    [
+      "the save call fails",
+      {
+        rpc: async () => ({
+          data: null,
+          error: { code: "XX000", message: "relation internal_table missing" },
+        }),
+      },
+      "error",
+      "database",
+    ],
+  ])(
+    "logs a failure the user can't fix (%s) and gives a reference and link",
+    async (_label, over, code, stage) => {
+      const { d, log } = deps(over);
+      const input = parse({ climbId: code === "forbidden" ? CLIMB : null });
+      const r = await saveClimbAnnotations(d, USER, input);
+      expect(r).toMatchObject({ ok: false, code });
+      if (r.ok) return;
+      expect(r.help).toMatchObject({ stage, userFixable: false });
+      const ref = r.help.reference!;
+      expect(ref).toMatch(/^SB-[0-9A-HJKMNP-TV-Z]{8}$/);
+      expect(r.help.reportPath).toContain(ref);
+      expect(r.help.nextSteps.join(" ")).toContain(ref);
+      expect(r.help.whatHappened).toMatch(/wasn't saved/);
+      expect(log).toHaveBeenCalledTimes(1);
+      expect(entryOf(log)).toMatchObject({
+        reference: ref,
+        stage,
+        code,
+        userId: USER,
+        scanId: SCAN,
+      });
+      // What the user sees never contains the provider's or the database's text.
+      const shown = JSON.stringify(r);
+      expect(shown).not.toMatch(/secret-name|10.0.0.5|internal_table/);
+    },
+  );
+
+  it("logs counts only: no positions, names or file contents", async () => {
+    const { d, log } = deps({
+      rpc: async () => ({
+        data: null,
+        error: { code: "XX000", message: "boom" },
+      }),
+    });
+    await saveClimbAnnotations(
+      d,
+      USER,
+      parse({
+        holds: [
+          hold("a", 1, "start", 0),
+          hold("b", 2, "hand", 1),
+          hold("c", 3, "finish", 2),
+          hold("f", 4, "foot"),
+        ],
+      }),
+    );
+    const entry = entryOf(log);
+    expect(entry.context).toEqual({
+      mode: "create",
+      holds: 3,
+      feet: 1,
+      paths: 1,
+    });
+    const text = JSON.stringify(entry);
+    expect(text).not.toMatch(/position|normal|The Slab/);
+  });
+
+  it("gives no reference when the log write fails, rather than one nobody can find", async () => {
+    const { d } = deps({
+      loadSurface: async () => {
+        throw new Error("x");
+      },
+      logFailure: async () => false,
+    });
+    const r = await saveClimbAnnotations(d, USER, parse());
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.help.reference).toBeUndefined();
+    expect(r.help.reportPath).toBeUndefined();
+    expect(r.help.nextSteps.length).toBeGreaterThan(0);
+  });
+
+  it("a database lookup that fails is an error, not a fake 'not found'", async () => {
+    const { d } = deps({
+      loadScan: async () => {
+        throw new Error("timeout");
+      },
+    });
+    const r = await saveClimbAnnotations(d, USER, parse());
+    expect(r).toMatchObject({ ok: false, code: "error" });
+  });
+
+  describe("payload problems", () => {
+    const issueFor = (over: Record<string, unknown>) => {
+      const p = parseSaveClimbInput(payload(over));
+      if (p.ok) throw new Error("expected a payload problem");
+      return p.issues;
+    };
+
+    it("a name that is too long is the user's to fix and isn't logged", async () => {
+      const { d, log } = deps();
+      const r = await rejectPayload(
+        d,
+        USER,
+        issueFor({ name: "x".repeat(200) }),
+      );
+      expect(r.help).toMatchObject({ stage: "payload", userFixable: true });
+      expect(r.help.whatYouCanDo.join(" ")).toMatch(/highlighted field/);
+      expect(log).not.toHaveBeenCalled();
+    });
+
+    it("a broken hold is the app's fault: logged with a reference", async () => {
+      const { d, log } = deps();
+      const r = await rejectPayload(
+        d,
+        USER,
+        issueFor({ holds: [{ ...hold("a", 1), position: [NaN, 0, 0] }] }),
+      );
+      expect(r.help).toMatchObject({ stage: "payload", userFixable: false });
+      expect(r.help.reference).toMatch(/^SB-/);
+      expect(log).toHaveBeenCalledTimes(1);
+    });
   });
 });
