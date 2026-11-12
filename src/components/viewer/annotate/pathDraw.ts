@@ -33,12 +33,19 @@ export function drawReducer(s: DrawState, a: DrawAction): DrawState {
   }
 }
 
-/** The climbing line: hold positions in sequence order (derived, never stored). */
+/** Feet are optional, unordered single points: not in the line or sequence. */
+export const isFoot = (h: Hold): boolean => h.type === "foot";
+
+/** The sequence: non-foot holds in seq_order (array order breaks ties). */
+export const sequenceHolds = (holds: Hold[]): Hold[] =>
+  holds
+    .filter((h) => !isFoot(h))
+    .sort((a, b) => (a.seq_order ?? 0) - (b.seq_order ?? 0));
+
+/** The climbing line: non-foot hold positions in sequence order (derived, never stored). */
 export function sequenceLine(holds: Hold[], climbId: string): ClimbPath | null {
-  if (holds.length < 2) return null;
-  const sorted = [...holds].sort(
-    (a, b) => (a.seq_order ?? 0) - (b.seq_order ?? 0),
-  );
+  const sorted = sequenceHolds(holds);
+  if (sorted.length < 2) return null;
   return {
     id: "derived-line",
     climb_id: climbId,

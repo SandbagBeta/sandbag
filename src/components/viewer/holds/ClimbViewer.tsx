@@ -5,6 +5,7 @@ import type { ClimbPath, Hold } from "@/lib/types";
 import { BoulderViewer } from "../BoulderViewer";
 import { ClimbLine } from "./ClimbLine";
 import { HoldMarkers } from "./HoldMarkers";
+import { holdsForSelection } from "./holdMath";
 
 export interface ClimbViewerProps {
   src: string;
@@ -35,6 +36,11 @@ export function ClimbViewer({
     () => paths.filter((p) => p.climb_id === selectedClimbId),
     [paths, selectedClimbId],
   );
+  // Feet belong to one climb only: show the selected climb's feet, nobody else's.
+  const visibleHolds = useMemo(
+    () => holdsForSelection(holds, selectedClimbId),
+    [holds, selectedClimbId],
+  );
   const lineHolds = useMemo(
     () => holds.filter((h) => h.climb_id === selectedClimbId),
     [holds, selectedClimbId],
@@ -45,7 +51,7 @@ export function ClimbViewer({
       scene={
         <>
           <HoldMarkers
-            holds={holds}
+            holds={visibleHolds}
             selectedClimbId={selectedClimbId}
             onSelectClimb={onSelectClimb}
           />

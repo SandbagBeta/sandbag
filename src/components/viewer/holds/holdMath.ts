@@ -37,6 +37,19 @@ export function markerTransform(
   };
 }
 
+/**
+ * Feet belong to one climb only: keep every non-foot hold, but a foot only
+ * when its climb is the selected one (none selected shows no feet).
+ */
+export function holdsForSelection(
+  holds: Hold[],
+  selectedClimbId: string | null,
+): Hold[] {
+  return holds.filter(
+    (h) => h.type !== "foot" || h.climb_id === selectedClimbId,
+  );
+}
+
 export function groupHoldsByType(holds: Hold[]): Record<HoldType, Hold[]> {
   const groups = Object.fromEntries(
     HOLD_TYPES.map((t) => [t, [] as Hold[]]),
