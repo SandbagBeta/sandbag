@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { forbidden, notFound } from "next/navigation";
 import { BoulderViewer } from "@/components/viewer";
 import { CHECKLIST, canReviewInUi, loadReviewScan } from "@/lib/review/queue";
 import { createServiceClient } from "@/lib/supabase/service";
 import { ReviewForm } from "../ReviewForm";
-import { Forbidden, getReviewer } from "../session";
+import { getReviewer } from "../session";
 
 export const metadata: Metadata = {
   title: "Review scan — SandBag",
@@ -32,7 +32,7 @@ export default async function ReviewScanPage({
 }) {
   const { scanId } = await params;
   const { supabase, trust } = await getReviewer(`/review/${scanId}`);
-  if (!canReviewInUi(trust)) return <Forbidden />;
+  if (!canReviewInUi(trust)) forbidden();
   const scan = await loadReviewScan(supabase, scanId);
   if (!scan) notFound();
   const src = await pendingGlbUrl(scan.glb_path);

@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { signOut } from "@/app/auth/actions";
 import { signInPath } from "@/lib/auth/gating";
 import { ensureProfile } from "@/lib/auth/profile";
+import { countUnread } from "@/lib/review/notifications";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 import { HandleForm } from "./HandleForm";
@@ -26,6 +28,7 @@ export default async function AccountPage({
 
   // Normally created in /auth/callback; retried here if that failed.
   const profile = await ensureProfile(supabase, data.user);
+  const unread = await countUnread(supabase);
 
   return (
     <main className="mx-auto flex max-w-lg flex-col gap-8 px-6 py-20">
@@ -45,6 +48,9 @@ export default async function AccountPage({
           <HandleForm handle={profile.handle} />
         </section>
       )}
+      <Link href="/account/notifications" className="underline">
+        Notifications{unread > 0 ? ` (${unread} new)` : ""}
+      </Link>
       <form action={signOut}>
         <button
           type="submit"
