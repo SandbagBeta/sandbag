@@ -3,6 +3,8 @@ import {
   buildSavePayload,
   describeSaveFailure,
   gradeError,
+  holdLabeler,
+  plainIssue,
 } from "./savePayload";
 import type { Hold } from "../types";
 
@@ -103,5 +105,59 @@ describe("describeSaveFailure", () => {
     expect(v.fields.name).toBe("Name taken.");
     expect(v.holdIds).toEqual(["h1", "h2"]);
     expect(v.issues).toHaveLength(4);
+  });
+});
+
+describe("holdLabeler and plainIssue", () => {
+  const holds: Hold[] = [
+    { ...hold(0), id: "a" },
+    { ...hold(1), id: "foot1", type: "foot", seq_order: null },
+    { ...hold(2), id: "c", seq_order: 2 },
+    { ...hold(1), id: "b", seq_order: 1 },
+  ];
+
+  it("numbers holds by sequence and feet separately", () => {
+    const label = holdLabeler(holds);
+    expect(label("a")).toBe("Hold 1");
+    expect(label("b")).toBe("Hold 2");
+    expect(label("c")).toBe("Hold 3");
+    expect(label("foot1")).toBe("Foot 1");
+    expect(label("gone")).toBe("A hold");
+  });
+
+  it("never shows ids, face numbers or metres", () => {
+    const label = holdLabeler(holds);
+    for (const code of [
+      "off_surface",
+      "face_out_of_range",
+      "hash_mismatch",
+      "duplicate_hold_id",
+      "foot_in_sequence",
+    ] as const) {
+      const m = plainIssue(
+        { code, message: "Hold c is 0.123 m off face 9", holdId: "c" },
+        label,
+      ).message;
+      expect(m).not.toMatch(/0\.123|face 9|\bc\b/);
+    }
+    expect(
+      plainIssue({ code: "off_surface", message: "x", holdId: "c" }, label)
+        .message,
+    ).toMatch(/^Hold 3 /);
+  });
+
+  it("keeps the server help on a failure view", () => {
+    const help = {
+      stage: "database" as const,
+      stageLabel: "Saving to the database",
+      userFixable: false,
+      whatHappened: "Your climb wasn't saved.",
+      whatYouCanDo: [],
+      nextSteps: [],
+      reference: "SB-ABCD2345",
+    };
+    expect(describeSaveFailure({ code: "error", message: "", help }).help).toBe(
+      help,
+    );
   });
 });

@@ -7,10 +7,10 @@ import {
   buildSavePayload,
   describeSaveFailure,
   gradeError,
+  holdLabeler,
   type SaveFailureView,
 } from "@/lib/annotations/savePayload";
 import { V_GRADES } from "@/lib/grades/vScale";
-import { signInPath } from "@/lib/auth/gating";
 import type { ClimbPath, Hold } from "@/lib/types";
 import type { ClimbMeta } from "./editorStore";
 
@@ -23,6 +23,11 @@ export interface SaveFormProps {
   onMeta: (meta: Partial<ClimbMeta>) => void;
   /** Point at a hold the server flagged. */
   onSelect: (id: string) => void;
+  /**
+   * A save failed (or, with null, succeeded). The editor shows it in
+   * {@link SaveFailureAlert} above the scrolling panel, where it can't be missed.
+   */
+  onFailure: (failure: SaveFailureView | null) => void;
   /** Called after a successful save, before navigating (clears the draft). */
   onSaved?: () => void;
 }
@@ -34,7 +39,6 @@ const field =
 export function SaveForm(p: SaveFormProps) {
   const router = useRouter();
   const [pending, start] = useTransition();
-  const [failure, setFailure] = useState<SaveFailureView | null>(null);
   const [gradeMsg, setGradeMsg] = useState<string | null>(null);
 
   const save = () => {
@@ -54,16 +58,16 @@ export function SaveForm(p: SaveFormProps) {
           }),
         );
         if (result.ok) {
-          setFailure(null);
+          p.onFailure(null);
           p.onSaved?.();
           router.push(`/boulder/${p.scanId}?submitted=1`);
           return;
         }
-        view = describeSaveFailure(result);
+        view = describeSaveFailure(result, holdLabeler(p.holds));
       } catch {
         view = describeSaveFailure({ code: "error", message: "" });
       }
-      setFailure(view);
+      p.onFailure(view);
       if (view.holdIds[0]) p.onSelect(view.holdIds[0]);
     });
   };
@@ -114,55 +118,6 @@ export function SaveForm(p: SaveFormProps) {
       >
         {pending ? "Saving…" : "Save climb for review"}
       </button>
-      <div role="alert">
-        {failure && (
-          <div className="space-y-1 text-red-700 dark:text-red-300">
-            <p>{failure.message}</p>
-            {failure.fields.name && <p>Name: {failure.fields.name}</p>}
-            {failure.issues.length > 0 && (
-              <ul className="list-disc pl-4">
-                {failure.issues.map((i, k) => (
-                  <li key={`${i.code}-${i.holdId ?? k}`}>
-                    {i.message}
-                    {i.holdId && (
-                      <>
-                        {" "}
-                        <button
-                          type="button"
-                          className="underline"
-                          onClick={() => p.onSelect(i.holdId!)}
-                        >
-                          Select hold
-                        </button>
-                      </>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-            {failure.action === "reload" && (
-              <button
-                type="button"
-                className="underline"
-                onClick={() => window.location.reload()}
-              >
-                Reload the scan
-              </button>
-            )}
-            {failure.action === "sign-in" && (
-              <a
-                className="underline"
-                href={signInPath(
-                  window.location.pathname,
-                  window.location.search,
-                )}
-              >
-                Sign in
-              </a>
-            )}
-          </div>
-        )}
-      </div>
     </div>
   );
 }
