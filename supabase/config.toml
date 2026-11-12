@@ -134,6 +134,10 @@ allowed_mime_types = [
   "model/obj",
   "application/zip",
   "application/octet-stream",
+  # The QC worker writes its thumbnail to uploads/{uploader}/{scan}/derived/
+  # thumb.webp; without this the upload is refused and thumbnails silently
+  # never exist (found while testing the publish step, #116).
+  "image/webp",
 ]
 
 # `published`: PUBLIC READ. QC-approved canonical compressed GLBs (+ thumbnails).

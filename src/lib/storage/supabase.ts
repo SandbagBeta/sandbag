@@ -34,6 +34,16 @@ function fail(action: string, error: { message?: string }): never {
 }
 
 /**
+ * supabase-js writes `Cache-Control: max-age=<cacheControl>`, so it takes only
+ * a number of seconds. Our interface takes a full header value; keep its
+ * `max-age`. Other directives (`public`, `immutable`) can't be expressed on
+ * Supabase Storage: a year-long max-age on a content-hashed key does the job.
+ */
+function maxAgeSeconds(header: string | undefined): string | undefined {
+  return header ? /max-age=(\d+)/i.exec(header)?.[1] : undefined;
+}
+
+/**
  * Stable public URL of an object in a public bucket. Pure: no client, no key
  * validation, so render paths can build it from the project URL alone. Use
  * `adapter.publicUrl` where a key isn't already trusted.
@@ -59,7 +69,7 @@ export function createSupabaseStorage(
       assertValidKey(key);
       const { error } = await files(bucket).upload(key, bytes, {
         contentType: options.contentType,
-        cacheControl: options.cacheControl,
+        cacheControl: maxAgeSeconds(options.cacheControl),
         upsert: options.upsert ?? false,
       });
       if (error) fail("put", error);
