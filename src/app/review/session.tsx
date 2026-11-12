@@ -24,14 +24,3 @@ export async function getReviewer(path: string) {
     trust: (profile?.trust_level ?? null) as TrustLevel | null,
   };
 }
-
-export function Forbidden() {
-  return (
-    <main className="mx-auto max-w-xl px-6 py-16">
-      <h1 className="text-3xl font-bold tracking-tight">403 Forbidden</h1>
-      <p className="mt-3 text-stone-600 dark:text-stone-400">
-        Only maintainers can review scans.
-      </p>
-    </main>
-  );
-}

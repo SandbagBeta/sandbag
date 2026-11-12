@@ -3,6 +3,8 @@ import { parseDevOrigins } from "./src/lib/devOrigins";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Enables forbidden() so non-reviewers get a real 403 on /review.
+  experimental: { authInterrupts: true },
   // Lets phones on the LAN load dev-only resources from `pnpm dev -H 0.0.0.0`.
   // Set DEV_ALLOWED_ORIGINS in .env.local; see .env.example.
   allowedDevOrigins: parseDevOrigins(process.env.DEV_ALLOWED_ORIGINS),
