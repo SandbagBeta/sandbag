@@ -25,6 +25,13 @@ describe("isGatedPath", () => {
     expect(isGatedPath(path)).toBe(false);
   });
 
+  it("gates /report-problem (#127)", () => {
+    expect(isGatedPath("/report-problem")).toBe(true);
+    expect(gateRedirect("/report-problem", "?ref=SB-ABCD2345", false)).toBe(
+      "/sign-in?next=%2Freport-problem%3Fref%3DSB-ABCD2345",
+    );
+  });
+
   it("gates /upload and its subpaths (#15), not look-alikes", () => {
     expect(GATED_PATH_PREFIXES).toContain("/upload");
     expect(isGatedPath("/upload")).toBe(true);

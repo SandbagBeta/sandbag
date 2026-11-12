@@ -19,7 +19,7 @@ export function DraftNotice({
   return (
     <div
       role="status"
-      className="absolute top-4 left-4 z-10 max-w-xs space-y-2 rounded-lg border border-amber-400 bg-amber-50/95 p-3 text-sm text-stone-900 shadow dark:border-amber-700 dark:bg-stone-900/95 dark:text-stone-100"
+      className="absolute top-14 left-4 z-10 max-w-xs space-y-2 rounded-lg border border-amber-400 bg-amber-50/95 p-3 text-sm text-stone-900 shadow dark:border-amber-700 dark:bg-stone-900/95 dark:text-stone-100"
     >
       <p>
         {notice.kind === "restored"

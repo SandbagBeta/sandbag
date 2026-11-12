@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { validateClimbAnnotations, type MeshSurface } from "@/lib/annotations";
-import { plainIssue } from "@/lib/annotations/savePayload";
+import { holdLabeler, plainIssue } from "@/lib/annotations/savePayload";
 import type { Hold } from "@/lib/types";
 import type { ClimbMeta } from "./editorStore";
 import { isFoot } from "./pathDraw";
@@ -21,18 +21,16 @@ export function ValidationPanel({
   scanContentHash,
   mesh,
 }: ValidationPanelProps) {
-  const issues = useMemo(
-    () =>
-      mesh
-        ? validateClimbAnnotations(
-            // Feet are optional: only start/hand/finish holds count (min 3)
-            // and take part in the sequence.
-            { name: meta.name, holds: holds.filter((h) => !isFoot(h)) },
-            { scanContentHash, mesh, existingNames: [] },
-          )
-        : [],
-    [holds, meta.name, scanContentHash, mesh],
-  );
+  const issues = useMemo(() => {
+    if (!mesh) return [];
+    const label = holdLabeler(holds);
+    return validateClimbAnnotations(
+      // Feet are optional: only start/hand/finish holds count (min 3)
+      // and take part in the sequence.
+      { name: meta.name, holds: holds.filter((h) => !isFoot(h)) },
+      { scanContentHash, mesh, existingNames: [] },
+    ).map((i) => plainIssue(i, label));
+  }, [holds, meta.name, scanContentHash, mesh]);
   return (
     <section aria-label="Validation" aria-live="polite" className="text-sm">
       {issues.length === 0 ? (
@@ -40,7 +38,7 @@ export function ValidationPanel({
       ) : (
         <ul className="list-disc pl-4 text-red-700 dark:text-red-300">
           {issues.map((i, k) => (
-            <li key={`${i.code}-${i.holdId ?? k}`}>{plainIssue(i).message}</li>
+            <li key={`${i.code}-${i.holdId ?? k}`}>{i.message}</li>
           ))}
         </ul>
       )}

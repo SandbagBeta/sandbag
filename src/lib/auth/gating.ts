@@ -10,6 +10,7 @@ export const GATED_PATH_PREFIXES: readonly string[] = [
   "/account",
   "/upload",
   "/review",
+  "/report-problem",
 ];
 
 export const SIGN_IN_PATH = "/sign-in";
