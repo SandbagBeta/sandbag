@@ -5,7 +5,7 @@
  */
 
 /** Bumped whenever a check, threshold or the pinned toolchain changes. */
-export const QC_PIPELINE_VERSION = "qc-1.0.0";
+export const QC_PIPELINE_VERSION = "qc-1.1.0";
 
 /** H2: raw file size cap (self-host / paid; hosted Free is 50 MB, ADR 002 D2). */
 export const MAX_RAW_BYTES = 200 * 1024 * 1024;

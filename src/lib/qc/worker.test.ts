@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -23,6 +24,7 @@ interface Setup {
   size?: number;
   downloadFails?: boolean;
   failState?: "queued" | "failed";
+  uploadFails?: boolean;
 }
 
 function setup(s: Setup = {}) {
@@ -34,6 +36,7 @@ function setup(s: Setup = {}) {
   const calls: { fn: string; args: Record<string, unknown> }[] = [];
   let claimed = false;
   const downloads: string[] = [];
+  const uploads: { key: string; bytes: Uint8Array; type?: string }[] = [];
   const client = Object.assign(fake.client, {
     rpc: async (fn: string, args: Record<string, unknown> = {}) => {
       calls.push({ fn, args });
@@ -72,6 +75,17 @@ function setup(s: Setup = {}) {
           ],
           error: null,
         }),
+        upload: async (
+          key: string,
+          body: Uint8Array,
+          o: { contentType?: string },
+        ) => {
+          if (s.uploadFails && key.endsWith(".glb")) {
+            return { data: null, error: { message: "503 secret-path" } };
+          }
+          uploads.push({ key, bytes: body, type: o.contentType });
+          return { data: { path: key }, error: null };
+        },
         download: async (p: string) => {
           downloads.push(p);
           return s.downloadFails
@@ -85,7 +99,7 @@ function setup(s: Setup = {}) {
   const run = () => processNextQcJob(client, { log: (l) => logs.push(l) });
   const scan = () => fake.row("scans");
   const names = () => calls.map((c) => c.fn);
-  return { fake, run, scan, calls, names, downloads, logs, client };
+  return { fake, run, scan, calls, names, downloads, uploads, logs, client };
 }
 
 describe("processNextQcJob", () => {
@@ -102,7 +116,16 @@ describe("processNextQcJob", () => {
       status: "pending_review",
       raw_path: rawPath("glb"),
     });
-    expect(t.scan()).not.toHaveProperty("glb_path"); // PR 3: no canonical GLB yet
+    // Canonical GLB (ADR 003 steps 4-5): derived key, hash, thumbnail, one patch.
+    const glb = t.uploads.find((u) => u.key.endsWith(".glb"))!;
+    const hash = createHash("sha256").update(glb.bytes).digest("hex");
+    expect(glb.key).toBe(`${UPLOADER}/${SCAN}/derived/${hash}.glb`);
+    expect(glb.type).toBe("model/gltf-binary");
+    expect(t.scan()).toMatchObject({ glb_path: glb.key, content_hash: hash });
+    expect(t.uploads.map((u) => u.key)).toContain(
+      `${UPLOADER}/${SCAN}/derived/thumb.webp`,
+    );
+    expect(t.scan().qc_report).toHaveProperty("recentred");
     expect(t.scan().tri_count).toBeGreaterThan(0);
     expect(t.scan().qc_report).toMatchObject({
       pipeline_version: expect.any(String),
@@ -146,6 +169,20 @@ describe("processNextQcJob", () => {
     };
     expect(report.checks[0]).toMatchObject({ id: "file_size" });
     expect(report.checks[0]?.message).toMatch(/limit/);
+  });
+
+  it("a failed scan builds and uploads nothing", async () => {
+    const t = setup({ fixture: "bad-flat.ply" });
+    expect((await t.run()).result).toBe("failed");
+    expect(t.uploads).toHaveLength(0);
+    expect(t.scan()).not.toHaveProperty("glb_path");
+  });
+
+  it("an upload failure is an infrastructure error: retry, no mesh recorded", async () => {
+    const t = setup({ fixture: "good-polycam-like.glb", uploadFails: true });
+    expect((await t.run()).result).toBe("retry");
+    expect(t.scan().status).not.toBe("pending_review");
+    expect(t.logs.join(" ")).not.toMatch(/secret-path/);
   });
 
   it("re-runs a failed_qc scan (maintainer re-run) back through processing", async () => {
