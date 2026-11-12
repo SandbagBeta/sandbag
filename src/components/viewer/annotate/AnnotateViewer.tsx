@@ -21,6 +21,7 @@ import {
   type DrawKind,
   type DrawState,
 } from "./pathDraw";
+import { SaveForm } from "./SaveForm";
 import { SequencePanel } from "./SequencePanel";
 
 /** Screen-space radius (px) within which a pointer-down grabs a hold. */
@@ -34,14 +35,18 @@ export interface AnnotateViewerProps extends Omit<
   "scene" | "bvh"
 > {
   scanContentHash: string;
+  /** Set to show the save form (issue #22); omitted on the dev harness. */
+  scanId?: string;
 }
 
 /**
- * Desktop hold-placement editor (issue #21). Holds live in client state only;
- * saving is a later PR. Lazy-load this module (`next/dynamic`, `ssr: false`).
+ * Desktop hold-placement editor (issues #21, #22). State is client-only until
+ * the save form calls `saveClimb`. Lazy-load this module (`next/dynamic`,
+ * `ssr: false`).
  */
 export function AnnotateViewer({
   scanContentHash,
+  scanId,
   children,
   ...viewer
 }: AnnotateViewerProps) {
@@ -117,7 +122,19 @@ export function AnnotateViewer({
         onName={(name) => setMeta({ name })}
         onDraw={(kind) => drawDispatch({ type: "start", kind })}
         onClearPath={(kind) => setPath(kind, [])}
-      />
+      >
+        {scanId && (
+          <SaveForm
+            scanId={scanId}
+            scanContentHash={scanContentHash}
+            holds={holds}
+            paths={paths}
+            meta={meta}
+            onMeta={setMeta}
+            onSelect={setSelected}
+          />
+        )}
+      </SequencePanel>
       <AnnotateControls
         activeType={activeType}
         onTypeChange={setActiveType}
