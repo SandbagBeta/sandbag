@@ -58,10 +58,15 @@ export type AnnotationIssueCode =
   /** Malformed payload field (shape, range, non-unit normal). */
   | "bad_payload";
 
+/** A form field the user can edit to fix a payload problem. */
+export type UserField = "name" | "description" | "proposedGrade" | "faInfo";
+
 export interface AnnotationIssue {
   code: AnnotationIssueCode;
   message: string;
   holdId?: string;
+  /** Set on `bad_payload` when the problem is in a field the user typed. */
+  field?: UserField;
 }
 
 export class AnnotationValidationError extends Error {
