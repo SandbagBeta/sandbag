@@ -28,7 +28,14 @@ export interface Hold {
   position: Vec3;
   /** Unit outward surface normal at `position`. */
   normal: Vec3;
-  /** Triangle index into the mesh primitive's index buffer (`indices[3i..3i+2]`). */
+  /**
+   * Global triangle index into the canonical GLB: the concatenation of all its
+   * triangle primitives in `flattenDocument` order (default scene, depth-first
+   * node traversal, primitives in order; non-triangle and empty primitives
+   * skipped). Not an index into a single primitive's index buffer: the viewer
+   * adds each mesh's triangle offset (`pick.ts`). Validated by
+   * `src/lib/annotations/surface.ts`.
+   */
   face_index: number;
   type: HoldType;
   /** Optional ordering along the climb (0-based), when the sequence matters. */
