@@ -15,6 +15,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildDatasetFiles } from "../src/lib/export/dataset";
+import { createSupabaseStorage } from "../src/lib/storage/supabase";
 
 const envFile = fileURLToPath(new URL("../.env.local", import.meta.url));
 if (existsSync(envFile)) process.loadEnvFile(envFile);
@@ -38,6 +39,7 @@ if (!url || !anonKey) {
 const db = createClient(url, anonKey, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
+const storage = createSupabaseStorage(db, url);
 
 const PAGE = 1000;
 const CHUNK = 100; // ids per `in (...)` filter, to keep request URLs short
@@ -113,11 +115,12 @@ async function main() {
 
   const inputs = [];
   for (const s of scans) {
-    const { data, error } = await db.storage
-      .from("published")
-      .download(s.glb_path);
-    if (error || !data)
+    let glb;
+    try {
+      glb = await storage.download({ bucket: "published", key: s.glb_path });
+    } catch {
       throw new Error(`mesh for scan ${s.id}: download failed`);
+    }
     const sClimbs = climbRows.filter((c) => c.scan_id === s.id);
     const ids = new Set(sClimbs.map((c) => c.id));
     const contributors = [
@@ -136,7 +139,7 @@ async function main() {
       holds: holds.filter((h) => ids.has(h.climb_id)),
       paths: paths.filter((p) => ids.has(p.climb_id)),
       contributors,
-      glb: new Uint8Array(await data.arrayBuffer()),
+      glb,
     });
   }
 

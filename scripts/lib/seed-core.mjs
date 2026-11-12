@@ -2,6 +2,7 @@
 // mocked Supabase client. scripts/seed.mjs is the thin CLI wrapper.
 import { readFile, stat } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
+import { createSupabaseStorage } from "../../src/lib/storage/supabase";
 import { MAX_FIXTURE_BYTES, readGLB } from "./glb.mjs";
 import { sha256 } from "../generate-demo-boulder.mjs";
 
@@ -206,15 +207,16 @@ export async function runSeed({
   }
 
   const supabase = createClient(url, key);
-  const { error } = await supabase.storage
-    .from(STORAGE_BUCKET)
-    .upload(STORAGE_PATH, info.glb, {
-      contentType: "model/gltf-binary",
-      upsert: true,
-    });
-  if (error) {
+  try {
+    await createSupabaseStorage(supabase, url).put(
+      { bucket: STORAGE_BUCKET, key: STORAGE_PATH },
+      info.glb,
+      { contentType: "model/gltf-binary", upsert: true },
+    );
+  } catch (err) {
+    // `detail` is the provider's message: fine for a dev script, never for a user.
     throw new Error(
-      `upload to ${STORAGE_BUCKET}/${STORAGE_PATH} failed: ${error.message}`,
+      `upload to ${STORAGE_BUCKET}/${STORAGE_PATH} failed: ${err.detail ?? err.message}`,
     );
   }
   log(`storage: uploaded ${STORAGE_BUCKET}/${STORAGE_PATH} to ${url}`);

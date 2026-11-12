@@ -2,6 +2,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { flattenDocument, readGltfDocument } from "../qc/gltf";
+import { storageFor } from "../storage";
 import { meshSurfaceFromParsed } from "./surface";
 import type { MeshSurface } from "./validate";
 
@@ -90,10 +91,10 @@ export function loadCanonicalSurface(
   ref: CanonicalMeshRef,
 ): Promise<MeshSurface> {
   return shared(ref, async (path) => {
-    const { data, error } = await db.storage.from("published").download(path);
-    if (error || !data) {
+    try {
+      return await storageFor(db).download({ bucket: "published", key: path });
+    } catch {
       throw new MeshUnavailableError("The mesh could not be downloaded.");
     }
-    return new Uint8Array(await data.arrayBuffer());
   });
 }
