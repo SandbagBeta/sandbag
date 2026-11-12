@@ -8,7 +8,12 @@ import { UploadForm } from "./UploadForm";
 
 export const metadata: Metadata = { title: "Upload a scan — SandBag" };
 
-export default async function UploadPage() {
+export default async function UploadPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ retry?: string }>;
+}) {
+  const { retry } = await searchParams;
   // Render per request, never at build time (Supabase env may be absent).
   await connection();
   // The proxy redirects signed-out users too; this is the real check.
@@ -27,7 +32,12 @@ export default async function UploadPage() {
         textures. Up to 200 MB. Automated checks run after the upload, then a
         reviewer takes a look. Uploads are shared under CC BY-SA 4.0.
       </p>
-      <UploadForm userId={data.user.id} supabaseUrl={url} anonKey={anonKey} />
+      <UploadForm
+        userId={data.user.id}
+        supabaseUrl={url}
+        anonKey={anonKey}
+        retryScanId={typeof retry === "string" ? retry : undefined}
+      />
     </main>
   );
 }
