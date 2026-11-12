@@ -64,6 +64,12 @@ export function buildFaceOffsets(root: Object3D): Map<Object3D, number> {
 export function pickFromHit(
   hit: PickHit,
   offsets: ReadonlyMap<Object3D, number>,
+  /**
+   * The picking ray's direction. The scan renders double-sided, so a hit can be
+   * on a face's back: the normal is then flipped to point at the viewer, so the
+   * marker sits on the side that was clicked.
+   */
+  rayDirection?: Vector3,
 ): Pick | null {
   if (!hit.face || hit.faceIndex == null) return null;
   const offset = offsets.get(hit.object);
@@ -73,6 +79,7 @@ export function pickFromHit(
     .clone()
     .applyNormalMatrix(new Matrix3().getNormalMatrix(hit.object.matrixWorld))
     .normalize();
+  if (rayDirection && n.dot(rayDirection) > 0) n.negate();
   return {
     position: [hit.point.x, hit.point.y, hit.point.z],
     normal: [n.x, n.y, n.z],

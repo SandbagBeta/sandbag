@@ -3,7 +3,12 @@
 import { useMemo } from "react";
 import { Html, Line } from "@react-three/drei";
 import type { ClimbPath, Hold } from "@/lib/types";
-import { offsetPathPoints, pathMidpoint } from "./holdMath";
+import {
+  LINE_SURFACE_OFFSET,
+  offsetPathPoints,
+  pathMidpoint,
+} from "./holdMath";
+import { useMarkerScale } from "./markerSize";
 import { PATH_STYLE } from "./holdStyle";
 
 /** Topout/downclimb points farther than this from a hold are not lifted. */
@@ -19,15 +24,16 @@ export interface ClimbLineProps {
 export function ClimbLine({ path, holds }: ClimbLineProps) {
   const style = PATH_STYLE[path.kind];
   const isLine = path.kind === "line";
+  const scale = useMarkerScale();
   const points = useMemo(
     () =>
       offsetPathPoints(
         path.points,
         holds,
-        undefined,
-        isLine ? Infinity : OFFSET_MAX_DIST,
+        LINE_SURFACE_OFFSET * scale,
+        isLine ? Infinity : OFFSET_MAX_DIST * scale,
       ),
-    [path.points, holds, isLine],
+    [path.points, holds, isLine, scale],
   );
   const labelAt = useMemo(
     () => (isLine ? null : pathMidpoint(points)),
@@ -35,7 +41,11 @@ export function ClimbLine({ path, holds }: ClimbLineProps) {
   );
   if (points.length < 2) return null;
   const dash = style.dash
-    ? { dashed: true, dashSize: style.dash.size, gapSize: style.dash.gap }
+    ? {
+        dashed: true,
+        dashSize: style.dash.size * scale,
+        gapSize: style.dash.gap * scale,
+      }
     : {};
   // Sparse points mean straight segments cut through convex rock, so draw a
   // faint pass that ignores depth under the solid pass: the whole path always
