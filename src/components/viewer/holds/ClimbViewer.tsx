@@ -16,6 +16,8 @@ export interface ClimbViewerProps {
   paths: ClimbPath[];
   selectedClimbId: string | null;
   onSelectClimb: (climbId: string) => void;
+  /** The scan's reviewed scale (`scans.scale_factor`); default 1. */
+  scale?: number;
   children?: ReactNode;
 }
 

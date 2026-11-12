@@ -38,6 +38,7 @@ export default async function AnnotatePage({ params }: { params: Params }) {
         src={src}
         label="3D scan to annotate"
         scanId={scan.id}
+        scale={scan.scale_factor}
         scanContentHash={hash}
         climbs={boulder.climbs}
         holds={boulder.holds}

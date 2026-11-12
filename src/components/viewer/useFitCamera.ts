@@ -26,6 +26,9 @@ export function useFitCamera(
     if (!object) return;
     // Throws "scan has no geometry" for empty/degenerate meshes; React routes
     // effect errors to the nearest error boundary (ViewerErrorBoundary).
+    // A scaled ancestor (the reviewed scale) hasn't rendered yet: bring the
+    // world matrices up to date so the box is in displayed units.
+    object.updateWorldMatrix(true, true);
     const box = measureBounds(object);
 
     const { camera, invalidate } = get();

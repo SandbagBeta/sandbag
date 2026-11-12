@@ -9,7 +9,8 @@ import { ViewerErrorBoundary } from "./ViewerErrorBoundary";
 import { LoadingOverlay } from "./LoadingOverlay";
 import { clearScanGLTF } from "./loaders";
 import type { CameraFit } from "./fitCamera";
-import { ScanDiagonalContext } from "./holds/markerSize";
+import { ScanDiagonalContext, ScanScaleContext } from "./holds/markerSize";
+import { safeScaleFactor } from "./holds/markerScale";
 
 export interface BoulderViewerProps {
   /** Absolute http(s) or root-relative URL of a compressed GLB. */
@@ -26,6 +27,12 @@ export interface BoulderViewerProps {
   scene?: ReactNode;
   /** Build a BVH over the scan so per-pointer-move raycasts stay cheap (annotation). */
   bvh?: boolean;
+  /**
+   * The scan's reviewed scale (`scans.scale_factor`): real size = GLB size *
+   * scale. Applied to the scene group at render time only; hold positions and
+   * face numbers stay in the GLB frame. Default 1.
+   */
+  scale?: number;
 }
 
 /**
@@ -39,7 +46,9 @@ export function BoulderViewer({
   children,
   scene,
   bvh = false,
+  scale = 1,
 }: BoulderViewerProps) {
+  const scaleFactor = safeScaleFactor(scale);
   const controlsRef = useRef<OrbitControlsRef | null>(null);
   const [fit, setFit] = useState<CameraFit | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -69,20 +78,31 @@ export function BoulderViewer({
           <directionalLight position={[4, 6, 3]} intensity={1.6} />
           <directionalLight position={[-3, 2, -4]} intensity={0.4} />
           <Suspense fallback={null}>
-            {bvh ? (
-              // `indirect` keeps the geometry's index buffer in file order. The
-              // default BVH reorders it in place, so a hit's faceIndex would no
-              // longer match the server's face numbering (flattenDocument) and
-              // every hold would be rejected off_surface.
-              <Bvh firstHitOnly indirect>
+            {/* key: a new scale remounts so the camera refits to the new size. */}
+            <group key={scaleFactor} scale={scaleFactor}>
+              {bvh ? (
+                // `indirect` keeps the geometry's index buffer in file order. The
+                // default BVH reorders it in place, so a hit's faceIndex would no
+                // longer match the server's face numbering (flattenDocument) and
+                // every hold would be rejected off_surface.
+                <Bvh firstHitOnly indirect>
+                  <ScanModel
+                    src={src}
+                    controlsRef={controlsRef}
+                    onFit={setFit}
+                  />
+                </Bvh>
+              ) : (
                 <ScanModel src={src} controlsRef={controlsRef} onFit={setFit} />
-              </Bvh>
-            ) : (
-              <ScanModel src={src} controlsRef={controlsRef} onFit={setFit} />
-            )}
-            <ScanDiagonalContext.Provider value={fit ? fit.radius * 2 : null}>
-              {scene}
-            </ScanDiagonalContext.Provider>
+              )}
+              <ScanScaleContext.Provider value={scaleFactor}>
+                <ScanDiagonalContext.Provider
+                  value={fit ? fit.radius * 2 : null}
+                >
+                  {scene}
+                </ScanDiagonalContext.Provider>
+              </ScanScaleContext.Provider>
+            </group>
           </Suspense>
           {fit && (
             <Grid

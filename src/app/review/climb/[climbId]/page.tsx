@@ -50,6 +50,7 @@ export default async function ReviewClimbPage({
         <ReviewClimbViewer
           src={src}
           climbId={climb.id}
+          scale={review.scale_factor}
           holds={holds}
           paths={paths}
         >

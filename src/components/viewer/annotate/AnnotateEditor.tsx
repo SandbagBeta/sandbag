@@ -25,6 +25,8 @@ export interface AnnotateEditorProps {
   scanContentHash: string;
   /** Enables saving (issue #22). */
   scanId?: string;
+  /** The scan's reviewed scale (`scans.scale_factor`); default 1. */
+  scale?: number;
   /** Read-only fallback data for small or touch screens. */
   climbs: Climb[];
   holds: Hold[];
@@ -38,6 +40,7 @@ export function AnnotateEditor({
   label,
   scanContentHash,
   scanId,
+  scale,
   climbs,
   holds,
   paths,
@@ -52,6 +55,7 @@ export function AnnotateEditor({
     return (
       <ClimbExplorer
         src={src}
+        scale={scale}
         label={label}
         climbs={climbs}
         holds={holds}
@@ -65,6 +69,7 @@ export function AnnotateEditor({
   return (
     <AnnotateViewer
       src={src}
+      scale={scale}
       label={label}
       scanContentHash={scanContentHash}
       scanId={scanId}

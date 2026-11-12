@@ -131,6 +131,19 @@ appends one surface point per click (`pathDraw.ts`), Enter commits, Escape
 cancels. `ValidationPanel` runs `validateClimbAnnotations` against the loaded
 mesh (`meshSurface.ts`) and lists issues inline. Nothing is saved yet.
 
+## Reviewed scale (issue #137)
+
+`scans.scale_factor` (real size = GLB size * factor) is applied at render time
+only. `BoulderViewer` takes `scale` (also `ClimbViewer`, `ClimbExplorer`,
+`AnnotateEditor`) and puts the model and the `scene` slot in one
+`<group scale>`; the camera fit, grid and clip planes are measured in displayed
+units (a new scale remounts the group so the camera refits). Hold positions,
+`face_index` and the validator stay in the GLB frame: markers are children of
+the scaled group, and annotate picks divide the hit point by the scale
+(`pickFromHit(..., scale)`) before storing it. Screen-space hold grabbing
+multiplies stored positions back by the scale. Invalid values fall back to 1
+(`safeScaleFactor`). Pages load `scale_factor` with the scan row.
+
 ## Marker size and one-sided scans (issue #133)
 
 - Scans come in arbitrary file units, so marker geometry, surface offsets,
@@ -138,6 +151,9 @@ mesh (`meshSurface.ts`) and lists issues inline. Nothing is saved yet.
   (`holds/markerScale.ts`: bounding-box diagonal / 4 m, clamped 0.02 to 10).
   `BoulderViewer` provides the diagonal inside the Canvas
   (`ScanDiagonalContext`); `useMarkerScale()` adds the user's percentage.
+- With a reviewed scale (#137) `ScanDiagonalContext` is the displayed (real)
+  diagonal, and `useMarkerScale()` divides by the scale because markers sit in
+  the scaled group. The displayed marker size is the same for any factor.
 - The `Marker size` slider (`MarkerSizeSlider`, 50 to 200 %, default 100 %) is in
   the viewer panel and the annotate builder. The value is kept in localStorage
   (`sandbag:marker-size:v1`) best-effort.

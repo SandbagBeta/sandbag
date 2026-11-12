@@ -60,7 +60,7 @@ export function buildFaceOffsets(root: Object3D): Map<Object3D, number> {
   return offsets;
 }
 
-/** World-space point, world-space unit normal and global face index of a hit; null if it has no face. */
+/** GLB-frame point (see `scale`), world-space unit normal and global face index of a hit; null if it has no face. */
 export function pickFromHit(
   hit: PickHit,
   offsets: ReadonlyMap<Object3D, number>,
@@ -70,6 +70,12 @@ export function pickFromHit(
    * marker sits on the side that was clicked.
    */
   rayDirection?: Vector3,
+  /**
+   * The scene's reviewed scale (#137). The scan is displayed scaled, so the hit
+   * point is in displayed units; holds are stored in the GLB frame, so the
+   * position is divided by it. Normals and face numbers are unaffected.
+   */
+  scale = 1,
 ): Pick | null {
   if (!hit.face || hit.faceIndex == null) return null;
   const offset = offsets.get(hit.object);
@@ -81,7 +87,7 @@ export function pickFromHit(
     .normalize();
   if (rayDirection && n.dot(rayDirection) > 0) n.negate();
   return {
-    position: [hit.point.x, hit.point.y, hit.point.z],
+    position: [hit.point.x / scale, hit.point.y / scale, hit.point.z / scale],
     normal: [n.x, n.y, n.z],
     faceIndex: offset + hit.faceIndex,
   };

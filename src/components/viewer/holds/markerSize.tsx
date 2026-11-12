@@ -47,11 +47,15 @@ export const useMarkerSize = create<MarkerSizeState>((set) => ({
 /** Scan bounding-box diagonal, provided inside the Canvas by BoulderViewer. */
 export const ScanDiagonalContext = createContext<number | null>(null);
 
+/** The scan's reviewed scale (real size = GLB size * factor), set by BoulderViewer. */
+export const ScanScaleContext = createContext<number>(1);
+
 /** Scale for marker geometry, offsets and line dashes in the current scene. */
 export function useMarkerScale(): number {
   const diagonal = useContext(ScanDiagonalContext);
+  const scale = useContext(ScanScaleContext);
   const percent = useMarkerSize((s) => s.percent);
-  return effectiveMarkerScale(diagonal, percent);
+  return effectiveMarkerScale(diagonal, percent, scale);
 }
 
 /** DOM slider, for the viewer and annotate side panels. */
