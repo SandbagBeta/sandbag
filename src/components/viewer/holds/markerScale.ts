@@ -26,9 +26,24 @@ export function markerScale(diagonal: number | null | undefined): number {
   );
 }
 
+/**
+ * A saved slider value, or the default when it is missing or not a percent in
+ * range. Out of range (e.g. a fraction like "1" or "0.5") is treated as
+ * invalid, not clamped: clamping to 50 is what made the slider open at its
+ * minimum. An empty string used to parse as 0 and clamp to 50 the same way.
+ */
+export function parseStoredSizePercent(raw: unknown): number {
+  const n = typeof raw === "string" && raw.trim() !== "" ? Number(raw) : raw;
+  if (typeof n !== "number" || !Number.isFinite(n)) return DEFAULT_SIZE_PERCENT;
+  return n < MIN_SIZE_PERCENT || n > MAX_SIZE_PERCENT
+    ? DEFAULT_SIZE_PERCENT
+    : Math.round(n);
+}
+
 /** Clamp to the slider's range; anything unusable becomes the default. */
 export function clampSizePercent(value: unknown): number {
-  const n = typeof value === "string" ? Number(value) : value;
+  const n =
+    typeof value === "string" && value.trim() !== "" ? Number(value) : value;
   if (typeof n !== "number" || !Number.isFinite(n)) return DEFAULT_SIZE_PERCENT;
   return Math.min(MAX_SIZE_PERCENT, Math.max(MIN_SIZE_PERCENT, Math.round(n)));
 }

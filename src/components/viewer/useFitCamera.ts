@@ -1,10 +1,22 @@
 "use client";
 
-import { useLayoutEffect, type ComponentRef, type RefObject } from "react";
+import {
+  useLayoutEffect,
+  useRef,
+  type ComponentRef,
+  type RefObject,
+} from "react";
+import type { Vec3 } from "@/lib/types";
 import { useThree } from "@react-three/fiber";
 import type { OrbitControls } from "@react-three/drei";
 import { PerspectiveCamera, type Object3D } from "three";
-import { computeCameraFit, measureBounds, type CameraFit } from "./fitCamera";
+import {
+  computeCameraFit,
+  isBehind,
+  measureBounds,
+  viewDirectionFor,
+  type CameraFit,
+} from "./fitCamera";
 
 /** Imperative OrbitControls instance (three-stdlib) behind drei's component. */
 export type OrbitControlsRef = ComponentRef<typeof OrbitControls>;
@@ -18,8 +30,15 @@ export function useFitCamera(
   objectRef: RefObject<Object3D | null>,
   controlsRef: RefObject<OrbitControlsRef | null>,
   onFit?: (fit: CameraFit) => void,
+  facing: Vec3 | null = null,
 ) {
   const get = useThree((s) => s.get);
+  const facingRef = useRef(facing);
+  const fitRef = useRef<CameraFit | null>(null);
+  // Declared before the effects below so they read the latest value.
+  useLayoutEffect(() => {
+    facingRef.current = facing;
+  });
 
   useLayoutEffect(() => {
     const object = objectRef.current;
@@ -34,7 +53,9 @@ export function useFitCamera(
     const { camera, invalidate } = get();
     const fit = computeCameraFit(box, {
       fovDeg: camera instanceof PerspectiveCamera ? camera.fov : 50,
+      facing: facingRef.current,
     });
+    fitRef.current = fit;
 
     camera.position.copy(fit.position);
     camera.near = fit.near;
@@ -54,4 +75,23 @@ export function useFitCamera(
     onFit?.(fit);
     invalidate();
   }, [objectRef, controlsRef, get, onFit]);
+
+  // Selection changed (a different climb, so a different wall): swing round to
+  // face it, but only if the camera is behind it. A user who has orbited to the
+  // front half keeps their view.
+  const facingKey = facing ? facing.map((n) => n.toFixed(2)).join(",") : "";
+  useLayoutEffect(() => {
+    const fit = fitRef.current;
+    if (!fit) return;
+    const { camera, invalidate } = get();
+    const controls = controlsRef.current;
+    const target = controls ? controls.target : fit.target;
+    const offset = camera.position.clone().sub(target);
+    if (!isBehind(offset, facingRef.current)) return;
+    const dir = viewDirectionFor(facingRef.current);
+    camera.position.copy(target).addScaledVector(dir, offset.length());
+    camera.lookAt(target);
+    controls?.update();
+    invalidate();
+  }, [facingKey, controlsRef, get]);
 }

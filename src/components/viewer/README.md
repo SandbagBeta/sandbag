@@ -111,6 +111,7 @@ in this section.
   heavy scans if needed.
 - Camera limits scale with the mesh bounding sphere, so meshes of any size
   frame correctly; `maxPolarAngle` keeps the camera above ground.
+- **Facing and sidedness:** `ScanModel` renders every scan `DoubleSide` (scans are one-sided; material flag only, so the indirect BVH face numbering is unchanged). `BoulderViewer` takes `facing` (mean hold normal; `ClimbViewer` passes the selected climb's, else all holds): the camera opens on that side, and when the selection changes a camera left behind the wall swings round while one already in front keeps the user's orbit. The marker-size slider falls back to 100% for a missing or invalid stored value.
 
 ## Hold placement (`annotate/`, issue #21)
 

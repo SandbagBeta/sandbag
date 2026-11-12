@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useRef, useState, type ReactNode } from "react";
+import type { Vec3 } from "@/lib/types";
 import { Canvas } from "@react-three/fiber";
 import { Bvh, Grid, OrbitControls } from "@react-three/drei";
 import type { OrbitControlsRef } from "./useFitCamera";
@@ -33,6 +34,12 @@ export interface BoulderViewerProps {
    * face numbers stay in the GLB frame. Default 1.
    */
   scale?: number;
+  /**
+   * Outward direction of the scan's dominant surface (mean hold normal). The
+   * camera opens on that side; when it changes (a different climb is selected)
+   * a camera left behind the wall swings round, one already in front stays put.
+   */
+  facing?: Vec3 | null;
 }
 
 /**
@@ -47,6 +54,7 @@ export function BoulderViewer({
   scene,
   bvh = false,
   scale = 1,
+  facing = null,
 }: BoulderViewerProps) {
   const scaleFactor = safeScaleFactor(scale);
   const controlsRef = useRef<OrbitControlsRef | null>(null);
@@ -90,10 +98,16 @@ export function BoulderViewer({
                     src={src}
                     controlsRef={controlsRef}
                     onFit={setFit}
+                    facing={facing}
                   />
                 </Bvh>
               ) : (
-                <ScanModel src={src} controlsRef={controlsRef} onFit={setFit} />
+                <ScanModel
+                  src={src}
+                  controlsRef={controlsRef}
+                  onFit={setFit}
+                  facing={facing}
+                />
               )}
               <ScanScaleContext.Provider value={scaleFactor}>
                 <ScanDiagonalContext.Provider

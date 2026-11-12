@@ -8,6 +8,7 @@ import {
   MIN_SIZE_PERCENT,
   SIZE_STEP_PERCENT,
   clampSizePercent,
+  parseStoredSizePercent,
   effectiveMarkerScale,
 } from "./markerScale";
 
@@ -16,7 +17,7 @@ export const MARKER_SIZE_KEY = "sandbag:marker-size:v1";
 function readStored(): number {
   try {
     const raw = window.localStorage.getItem(MARKER_SIZE_KEY);
-    return raw === null ? DEFAULT_SIZE_PERCENT : clampSizePercent(raw);
+    return parseStoredSizePercent(raw);
   } catch {
     return DEFAULT_SIZE_PERCENT;
   }

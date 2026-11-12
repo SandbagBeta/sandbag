@@ -3,6 +3,7 @@
 import { useMemo, type ReactNode } from "react";
 import type { ClimbPath, Hold } from "@/lib/types";
 import { BoulderViewer } from "../BoulderViewer";
+import { dominantNormal } from "../fitCamera";
 import { ClimbLine } from "./ClimbLine";
 import { HoldMarkers } from "./HoldMarkers";
 import { holdsForSelection } from "./holdMath";
@@ -47,9 +48,19 @@ export function ClimbViewer({
     () => holds.filter((h) => h.climb_id === selectedClimbId),
     [holds, selectedClimbId],
   );
+  // Face the selected climb's wall; with no selection (or no holds on it), the
+  // scan's dominant surface as shown by every hold.
+  const facing = useMemo(
+    () =>
+      dominantNormal(
+        (lineHolds.length ? lineHolds : holds).map((h) => h.normal),
+      ),
+    [holds, lineHolds],
+  );
   return (
     <BoulderViewer
       {...viewer}
+      facing={facing}
       scene={
         <>
           <HoldMarkers
