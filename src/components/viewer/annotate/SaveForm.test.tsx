@@ -90,6 +90,18 @@ describe("SaveForm", () => {
     );
   });
 
+  it("editing: sends the climb id, says Save changes, and returns with updated=1", async () => {
+    save.mockResolvedValue({ ok: true, climbId: "c1" });
+    setup({ climbId: "c1" });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() =>
+      expect(push).toHaveBeenCalledWith("/boulder/s1?updated=1"),
+    );
+    expect(save).toHaveBeenCalledWith(
+      expect.objectContaining({ climbId: "c1", scanId: "s1" }),
+    );
+  });
+
   it("names holds by number and selects the flagged hold", async () => {
     save.mockResolvedValue({
       ok: false,

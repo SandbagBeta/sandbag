@@ -17,8 +17,16 @@ export interface DraftStorage {
 }
 
 const VERSION = 1;
-export const draftKey = (scanId: string) =>
-  `sandbag:draft:v${VERSION}:${scanId}`;
+export const draftKey = (draftId: string) =>
+  `sandbag:draft:v${VERSION}:${draftId}`;
+
+/**
+ * What a draft is stored under. A new climb keeps the scan id (so existing
+ * drafts survive); an edit of a saved climb has its own key, so the two never
+ * overwrite each other.
+ */
+export const draftIdFor = (scanId: string, editingClimbId?: string | null) =>
+  editingClimbId ? `${scanId}:edit:${editingClimbId}` : scanId;
 
 interface StoredDraft {
   v: number;

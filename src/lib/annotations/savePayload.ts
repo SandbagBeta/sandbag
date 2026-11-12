@@ -37,6 +37,8 @@ function sequencePayload(holds: Hold[]) {
 
 export function buildSavePayload(input: {
   scanId: string;
+  /** Set when editing a saved climb: replaces its holds and paths (the name is kept). */
+  climbId?: string | null;
   scanContentHash: string;
   meta: SaveFormState;
   holds: Hold[];
@@ -46,6 +48,7 @@ export function buildSavePayload(input: {
   const fa = meta.fa_info.trim();
   return {
     scanId: input.scanId,
+    climbId: input.climbId ?? null,
     scanContentHash: input.scanContentHash,
     name: meta.name.trim(),
     description: meta.description.trim(),

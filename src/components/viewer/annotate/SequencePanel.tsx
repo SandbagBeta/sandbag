@@ -23,6 +23,8 @@ export interface SequencePanelProps {
   onReorder: (id: string, toIndex: number) => void;
   onRemove: (id: string) => void;
   onName: (name: string) => void;
+  /** Editing a saved climb: the name is kept as it is. */
+  nameLocked?: boolean;
   onDraw: (kind: DrawKind) => void;
   onClearPath: (kind: DrawKind) => void;
   /** Rendered under the live validation, above the scroll (save failures). */
@@ -74,8 +76,14 @@ export function SequencePanel(p: SequencePanelProps) {
           <input
             value={p.meta.name}
             onChange={(e) => p.onName(e.target.value)}
+            readOnly={p.nameLocked}
             className="mt-1 block w-full rounded border border-stone-300 bg-transparent px-2 py-1 dark:border-stone-700"
           />
+          {p.nameLocked && (
+            <span className="mt-1 block text-xs opacity-80">
+              The name can&apos;t be changed while editing.
+            </span>
+          )}
         </label>
         <MarkerSizeSlider />
         <SequenceList

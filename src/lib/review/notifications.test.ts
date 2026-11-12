@@ -57,4 +57,38 @@ describe("loadNotifications", () => {
     });
     expect(out[0]?.message).toContain("rejected");
   });
+
+  const review = (verdict: string, subject_type = "climb") => ({
+    id: "n1",
+    created_at: "x",
+    read_at: null,
+    reviews: {
+      verdict,
+      reason: "Move the start",
+      subject_type,
+      subject_id: "c1",
+    },
+  });
+
+  it("links request-changes on a pending climb to its edit page", async () => {
+    const db = fakeDb(
+      [review("request_changes")],
+      [{ id: "c1", name: "Crimpy", scan_id: "s1", status: "pending_review" }],
+    );
+    expect((await loadNotifications(db))[0]?.editHref).toBe(
+      "/boulder/s1/annotate?climb=c1",
+    );
+  });
+
+  it.each([
+    ["approve", "published"],
+    ["reject", "rejected"],
+    ["request_changes", "published"],
+  ])("offers no edit link for %s on a %s climb", async (verdict, status) => {
+    const db = fakeDb(
+      [review(verdict)],
+      [{ id: "c1", name: "Crimpy", scan_id: "s1", status }],
+    );
+    expect((await loadNotifications(db))[0]?.editHref).toBeNull();
+  });
 });

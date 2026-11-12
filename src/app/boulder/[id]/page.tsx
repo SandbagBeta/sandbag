@@ -83,7 +83,7 @@ export default async function BoulderPage({
   params: Params;
   searchParams: SearchParams;
 }) {
-  const [{ id }, { climb, submitted }] = await Promise.all([
+  const [{ id }, { climb, submitted, updated }] = await Promise.all([
     params,
     searchParams,
   ]);
@@ -161,6 +161,14 @@ export default async function BoulderPage({
                 Add a climb
               </Link>
             </div>
+            {updated && (
+              <p
+                role="status"
+                className="rounded border border-emerald-700 p-2 text-sm text-emerald-800 dark:text-emerald-300"
+              >
+                Your changes were saved. The climb is still waiting for review.
+              </p>
+            )}
             {submitted && (
               <p
                 role="status"

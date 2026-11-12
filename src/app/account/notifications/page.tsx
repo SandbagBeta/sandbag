@@ -64,6 +64,13 @@ export default async function NotificationsPage() {
                     </span>
                   )}
                 </p>
+                {n.editHref && (
+                  <p className="mt-2">
+                    <Link href={n.editHref} className="underline">
+                      Edit your climb
+                    </Link>
+                  </p>
+                )}
                 {n.reason && (
                   <p className="mt-1 text-stone-700 dark:text-stone-300">
                     Reviewer note: {n.reason}

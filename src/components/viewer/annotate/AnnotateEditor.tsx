@@ -4,6 +4,7 @@ import { useSyncExternalStore, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import type { Climb, ClimbPath, Hold } from "@/lib/types";
 import { ClimbExplorer } from "../climbs/ClimbExplorer";
+import type { AnnotateViewerProps } from "./AnnotateViewer";
 
 const AnnotateViewer = dynamic(
   () => import("./AnnotateViewer").then((m) => m.AnnotateViewer),
@@ -25,6 +26,8 @@ export interface AnnotateEditorProps {
   scanContentHash: string;
   /** Enables saving (issue #22). */
   scanId?: string;
+  /** Edit this saved climb instead of starting a new one (issue #22). */
+  edit?: AnnotateViewerProps["edit"];
   /** The scan's reviewed scale (`scans.scale_factor`); default 1. */
   scale?: number;
   /** Read-only fallback data for small or touch screens. */
@@ -40,6 +43,7 @@ export function AnnotateEditor({
   label,
   scanContentHash,
   scanId,
+  edit,
   scale,
   climbs,
   holds,
@@ -73,6 +77,7 @@ export function AnnotateEditor({
       label={label}
       scanContentHash={scanContentHash}
       scanId={scanId}
+      edit={edit}
       className="h-dvh w-full"
     >
       {children}

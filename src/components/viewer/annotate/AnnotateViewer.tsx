@@ -12,7 +12,7 @@ import { useThree } from "@react-three/fiber";
 import { Raycaster, Vector2, Vector3, type Camera } from "three";
 import { useStore } from "zustand";
 import type { MeshSurface } from "@/lib/annotations";
-import type { HoldType, Vec3 } from "@/lib/types";
+import type { ClimbPath, Hold, HoldType, Vec3 } from "@/lib/types";
 import { BoulderViewer, type BoulderViewerProps } from "../BoulderViewer";
 import { ClimbLine } from "../holds/ClimbLine";
 import { HoldMarkers } from "../holds/HoldMarkers";
@@ -20,7 +20,12 @@ import { ScanScaleContext, useMarkerScale } from "../holds/markerSize";
 import { safeScaleFactor } from "../holds/markerScale";
 import { useScanGLTF } from "../loaders";
 import { AnnotateControls } from "./AnnotateControls";
-import { createEditorStore, type HoldPlacement } from "./editorStore";
+import {
+  createEditorStore,
+  type ClimbMeta,
+  type HoldPlacement,
+} from "./editorStore";
+import { draftIdFor } from "./draftStorage";
 import { buildMeshSurface } from "./meshSurface";
 import { placeFromClick } from "./placement";
 import { buildFaceOffsets, isClick, pickFromHit } from "./pick";
@@ -53,6 +58,17 @@ export interface AnnotateViewerProps extends Omit<
   scanContentHash: string;
   /** Set to show the save form (issue #22); omitted on the dev harness. */
   scanId?: string;
+  /**
+   * Editing a saved climb of this scan: its holds, paths and meta start in the
+   * editor and Save replaces them (the name is kept). Its browser draft is
+   * kept apart from the new-climb draft.
+   */
+  edit?: {
+    climbId: string;
+    meta: ClimbMeta;
+    holds: Hold[];
+    paths: ClimbPath[];
+  };
 }
 
 /**
@@ -63,11 +79,18 @@ export interface AnnotateViewerProps extends Omit<
 export function AnnotateViewer({
   scanContentHash,
   scanId,
+  edit,
   children,
   ...viewer
 }: AnnotateViewerProps) {
   const [store] = useState(() =>
-    createEditorStore({ climbId: "draft", scanContentHash }),
+    createEditorStore({
+      climbId: edit?.climbId ?? "draft",
+      scanContentHash,
+      holds: edit?.holds,
+      paths: edit?.paths,
+      meta: edit?.meta,
+    }),
   );
   const holds = useStore(store, (s) => s.holds);
   const canUndo = useStore(store, (s) => s.past.length > 0);
@@ -85,7 +108,11 @@ export function AnnotateViewer({
     : null;
   const { retype, remove, undo, redo, reorder, setMeta, setPath } =
     store.getState();
-  const draft = useDraft(store, scanId, scanContentHash);
+  const draft = useDraft(
+    store,
+    scanId ? draftIdFor(scanId, edit?.climbId) : undefined,
+    scanContentHash,
+  );
 
   // Enter commits the drawn path, Escape discards it.
   useEffect(() => {
@@ -139,6 +166,7 @@ export function AnnotateViewer({
         onReorder={reorder}
         onRemove={remove}
         onName={(name) => setMeta({ name })}
+        nameLocked={!!edit}
         onDraw={(kind) => drawDispatch({ type: "start", kind })}
         onClearPath={(kind) => setPath(kind, [])}
         alerts={<SaveFailureAlert failure={failure} onSelect={setSelected} />}
@@ -146,6 +174,7 @@ export function AnnotateViewer({
         {scanId && (
           <SaveForm
             scanId={scanId}
+            climbId={edit?.climbId}
             scanContentHash={scanContentHash}
             holds={holds}
             paths={paths}
