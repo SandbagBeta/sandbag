@@ -52,7 +52,9 @@ export type AnnotationIssueCode =
   | "hash_mismatch"
   | "face_out_of_range"
   | "off_surface"
-  | "bad_sequence";
+  | "bad_sequence"
+  /** Malformed payload field (shape, range, non-unit normal). */
+  | "bad_payload";
 
 export interface AnnotationIssue {
   code: AnnotationIssueCode;
