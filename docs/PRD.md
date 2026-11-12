@@ -192,7 +192,7 @@ Row-level security: contributors edit their own pending items (holds and paths o
 ## 10. ML roadmap (v2 — designed for from day one)
 
 - Every published hold = (mesh patch, position, type) label. The annotation tool is a **labeling tool in disguise**.
-- Export format issue (M5): scans + holds as a documented dataset (GLB + JSON manifest), versioned, CC BY-SA.
+- Dataset export (M5, [docs/dataset.md](dataset.md)): scans + holds as a documented dataset (GLB + JSON manifest + `labels.jsonl`), versioned by `schema_version`, CC BY-SA. A weekly workflow publishes it as an artifact.
 - Candidate approach: sample local geometry patches (curvature, normals) + texture around annotated points → train patch classifier / mesh segmentation (e.g., point-cloud or mesh CNN) → propose candidate holds on new scans → human confirms in the same annotation UI (hybrid flow).
 - Success gate to start training: ≥ 50 published scans / ≥ 1,500 annotated holds.
 
