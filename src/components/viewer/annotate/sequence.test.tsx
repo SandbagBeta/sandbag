@@ -81,7 +81,7 @@ describe("ValidationPanel", () => {
     render(
       <ValidationPanel
         holds={[hold("a", 0)]}
-        meta={{ name: "", description: "", proposed_grade: "" }}
+        meta={{ name: "", description: "", proposed_grade: "", fa_info: "" }}
         scanContentHash="abc"
         mesh={{ positions: [0, 0, 0, 1, 0, 0, 0, 1, 0], indices: [0, 1, 2] }}
       />,

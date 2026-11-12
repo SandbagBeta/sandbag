@@ -60,7 +60,7 @@ http://127.0.0.1:54321/auth/v1/callback
 
 ### Uploading a scan
 
-New to scanning? Read the [capture guide](docs/capture-guide.md) first.
+New to scanning? Read the [capture guide](docs/capture-guide.md) first. To add a climb to a published scan, see [annotating](docs/annotating.md).
 
 `/upload` (sign-in required) takes a `.glb`, `.gltf`, `.ply`, or a `.zip` holding an `.obj` or `.gltf` with its textures, up to 200 MB. It creates a `scans` row (status `uploaded`), then sends the file to Supabase Storage over TUS resumable uploads in 6 MB chunks at `uploads/{user_id}/{scan_id}/raw/source.<ext>`. The original filename is never stored. A dropped connection retries with backoff, and reloading the page and picking the same file resumes from the last chunk. Code: `src/lib/upload/`, `src/app/upload/`.
 

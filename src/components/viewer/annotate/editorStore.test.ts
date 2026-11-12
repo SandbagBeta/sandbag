@@ -113,6 +113,7 @@ describe("editorReducer", () => {
       name: "Warmup",
       description: "",
       proposed_grade: "V2",
+      fa_info: "",
     });
   });
 

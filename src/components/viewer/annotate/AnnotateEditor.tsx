@@ -23,6 +23,8 @@ export interface AnnotateEditorProps {
   src: string;
   label: string;
   scanContentHash: string;
+  /** Enables saving (issue #22). */
+  scanId?: string;
   /** Read-only fallback data for small or touch screens. */
   climbs: Climb[];
   holds: Hold[];
@@ -35,6 +37,7 @@ export function AnnotateEditor({
   src,
   label,
   scanContentHash,
+  scanId,
   climbs,
   holds,
   paths,
@@ -64,6 +67,7 @@ export function AnnotateEditor({
       src={src}
       label={label}
       scanContentHash={scanContentHash}
+      scanId={scanId}
       className="h-dvh w-full"
     >
       {children}

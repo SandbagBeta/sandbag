@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import type { MeshSurface } from "@/lib/annotations";
 import type { Hold } from "@/lib/types";
 import type { DrawKind, DrawState } from "./pathDraw";
@@ -20,6 +21,8 @@ export interface SequencePanelProps {
   onName: (name: string) => void;
   onDraw: (kind: DrawKind) => void;
   onClearPath: (kind: DrawKind) => void;
+  /** Rendered below validation (the save form). */
+  children?: ReactNode;
 }
 
 const KINDS: DrawKind[] = ["topout", "downclimb"];
@@ -82,6 +85,7 @@ export function SequencePanel(p: SequencePanelProps) {
         scanContentHash={p.scanContentHash}
         mesh={p.mesh}
       />
+      {p.children}
     </aside>
   );
 }
