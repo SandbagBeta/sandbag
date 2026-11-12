@@ -3,6 +3,15 @@ import { parseDevOrigins } from "./src/lib/devOrigins";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // QC loads wasm by file path at runtime (draco3dgltf reads its .wasm next to
+  // its JS). Bundling rewrites that path and the read fails (#119), so keep
+  // these as plain node_modules requires and make sure the files are traced
+  // into the deploy. sharp is native and external by default; listed so that
+  // stays true.
+  serverExternalPackages: ["draco3dgltf", "sharp"],
+  outputFileTracingIncludes: {
+    "/api/qc/run": ["./node_modules/draco3dgltf/*.wasm"],
+  },
   // Enables forbidden() so non-reviewers get a real 403 on /review.
   experimental: { authInterrupts: true },
   // Lets phones on the LAN load dev-only resources from `pnpm dev -H 0.0.0.0`.
