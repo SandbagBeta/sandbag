@@ -13,6 +13,7 @@ import { useScanGLTF } from "../loaders";
 import { AnnotateControls } from "./AnnotateControls";
 import { createEditorStore, type HoldPlacement } from "./editorStore";
 import { buildMeshSurface } from "./meshSurface";
+import { placeFromClick } from "./placement";
 import { buildFaceOffsets, isClick, pickFromHit } from "./pick";
 import {
   drawReducer,
@@ -290,7 +291,10 @@ function AnnotateScene({
         const { draw, onDrawPoint } = live.current;
         if (draw.kind) {
           if (at) onDrawPoint(at.position);
-        } else onSelect(at ? store.getState().place(at, activeType) : null);
+        } else
+          onSelect(
+            at ? placeFromClick(store.getState(), at, activeType) : null,
+          );
       }
       down = dragging = null;
       setDrag(null);
