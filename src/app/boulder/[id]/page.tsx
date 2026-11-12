@@ -100,6 +100,7 @@ export default async function BoulderPage({
         holds={data.holds}
         paths={data.paths}
         initialClimbId={Array.isArray(climb) ? climb[0] : climb}
+        scale={data.scan.scale_factor}
         header={
           <header className="space-y-2">
             <nav

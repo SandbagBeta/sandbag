@@ -22,6 +22,7 @@ export interface BoulderData {
     | "capture_app"
     | "captured_at"
     | "license"
+    | "scale_factor"
     | "created_at"
   > & { glb_path: string };
   climbs: Climb[];
@@ -52,7 +53,7 @@ export async function loadBoulder(
   const scanRes = await db
     .from("scans")
     .select(
-      "id, openbeta_area_id, glb_path, content_hash, tri_count, capture_app, captured_at, license, created_at",
+      "id, openbeta_area_id, glb_path, content_hash, tri_count, capture_app, captured_at, license, scale_factor, created_at",
     )
     .eq("id", id.toLowerCase())
     .eq("status", "published")

@@ -141,6 +141,42 @@ describe("pickFromHit", () => {
     expect(p.normal[1]!).toBeCloseTo(-1);
   });
 
+  it("maps a hit on a scaled scene back to the GLB frame (#137)", () => {
+    const factor = 13.3;
+    const plain = threeScene();
+    const plainHit = new Raycaster(
+      new Vector3(10.2, 0.5, 5),
+      new Vector3(0, 0, -1),
+    ).intersectObject(plain.root, true)[0]!;
+    const want = pickFromHit(plainHit, buildFaceOffsets(plain.root))!;
+
+    // Same scan under a scaled parent, picked by a ray in displayed units.
+    const scaled = threeScene();
+    const parent = new Group();
+    parent.scale.setScalar(factor);
+    parent.add(scaled.root);
+    parent.updateMatrixWorld(true);
+    const ray = new Raycaster(
+      new Vector3(10.2 * factor, 0.5 * factor, 5 * factor),
+      new Vector3(0, 0, -1),
+    );
+    const hit = ray.intersectObject(scaled.root, true)[0]!;
+    const got = pickFromHit(
+      hit,
+      buildFaceOffsets(scaled.root),
+      ray.ray.direction,
+      factor,
+    )!;
+
+    expect(got.faceIndex).toBe(want.faceIndex);
+    got.position.forEach((v, i) => expect(v).toBeCloseTo(want.position[i]!));
+    got.normal.forEach((v, i) => expect(v).toBeCloseTo(want.normal[i]!));
+    // Without the factor the stored hold would be 13.3x off the surface.
+    expect(
+      pickFromHit(hit, buildFaceOffsets(scaled.root))!.position[0],
+    ).toBeCloseTo(want.position[0]! * factor);
+  });
+
   it("returns null for meshes outside the offset map", () => {
     const { b } = threeScene();
     const hit = new Raycaster(

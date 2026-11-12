@@ -15,12 +15,14 @@ const ClimbViewer = dynamic(
 export function ReviewClimbViewer({
   src,
   climbId,
+  scale,
   holds,
   paths,
   children,
 }: {
   src: string;
   climbId: string;
+  scale?: number;
   holds: Hold[];
   paths: ClimbPath[];
   children?: ReactNode;
@@ -30,6 +32,7 @@ export function ReviewClimbViewer({
       src={src}
       label="Proposed holds and line"
       className="h-96 w-full rounded border border-stone-300 dark:border-stone-700"
+      scale={scale}
       holds={holds}
       paths={paths}
       selectedClimbId={climbId}
