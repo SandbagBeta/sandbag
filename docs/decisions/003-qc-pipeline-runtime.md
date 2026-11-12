@@ -285,6 +285,7 @@ Budgets for the implementation:
 ## Consequences
 
 - PRD §7 and §9 say "Edge Function" and "Draco-compress". The #16 implementation PR changes them to "Node worker route in the app" and "meshopt", and adds the hard/soft split from §8. PLAN.md §5's open question is answered by this ADR.
+- Deploy note (#119): `draco3dgltf` loads its `.wasm` by file path, which a bundled build rewrites. `next.config.ts` lists it (and `sharp`) in `serverExternalPackages` and traces `draco3dgltf/*.wasm` into `/api/qc/run` via `outputFileTracingIncludes`. A decoder that fails to initialise throws `QcInfrastructureError`, which the worker retries; it is never a `parse` verdict.
 - `@gltf-transform/*` and `meshoptimizer` move from devDependencies to dependencies. Add a pure-JS unzip. Add `draco3dgltf` (wasm, no native build) only to *decode* Draco-compressed inputs; the output is never Draco (O7). `sharp` becomes a direct dependency for WebP thumbnails (O5).
 - `qc_report` gets a typed shape in `src/lib/types.ts` (`QcCheckResult = {id, pass, severity: "error" | "warning" | "info", message, data}` plus pipeline metadata), replacing `Record<string, unknown>`.
 - The 5M-triangle limit gives a 32.8 MB meshopt GLB (texture included) [M], which is heavy for phones and for the egress budget in ADR 002. The codec is now decided (meshopt), but decimation and texture targets still belong in the compression ADR, and this pipeline is where they will run.

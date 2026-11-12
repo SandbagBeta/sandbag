@@ -13,6 +13,7 @@ import {
   assertIndicesInRange,
   centreToFloat32,
   MeshParseError,
+  QcInfrastructureError,
   type ParsedMesh,
   type TextureSize,
 } from "./mesh";
@@ -144,13 +145,21 @@ let ioPromise: Promise<NodeIO> | null = null;
 
 function getIO(): Promise<NodeIO> {
   ioPromise ??= (async () => {
-    await MeshoptDecoder.ready;
-    return new NodeIO()
-      .registerExtensions(ALL_EXTENSIONS)
-      .registerDependencies({
-        "draco3d.decoder": await draco3d.createDecoderModule(),
-        "meshopt.decoder": MeshoptDecoder,
+    try {
+      await MeshoptDecoder.ready;
+      return new NodeIO()
+        .registerExtensions(ALL_EXTENSIONS)
+        .registerDependencies({
+          "draco3d.decoder": await draco3d.createDecoderModule(),
+          "meshopt.decoder": MeshoptDecoder,
+        });
+    } catch (cause) {
+      // Not the contributor's file: a decoder wasm that won't load.
+      ioPromise = null; // don't cache the failure; the retry tries again
+      throw new QcInfrastructureError("glTF decoder failed to initialise", {
+        cause,
       });
+    }
   })();
   return ioPromise;
 }

@@ -34,6 +34,18 @@ export interface ParsedMesh {
   centre: readonly [number, number, number];
 }
 
+/**
+ * The pipeline itself is broken (a decoder wasm failed to load), not the
+ * file. Never turned into a contributor verdict: it propagates so the worker
+ * retries via fail_qc_job.
+ */
+export class QcInfrastructureError extends Error {
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message, options);
+    this.name = "QcInfrastructureError";
+  }
+}
+
 /** Malformed input: the message is contributor-facing and fixed (never file text). */
 export class MeshParseError extends Error {
   constructor(

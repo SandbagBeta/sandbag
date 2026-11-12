@@ -25,7 +25,7 @@ import {
   readGltfDocument,
   readGltfJson,
 } from "./gltf";
-import { MeshParseError, type ParsedMesh } from "./mesh";
+import { MeshParseError, QcInfrastructureError, type ParsedMesh } from "./mesh";
 import { StageTimer, type QcMetrics } from "./metrics";
 import { objFaceLineCount, parseObj } from "./obj";
 import { parsePly, parsePlyHeader, plyHeaderFaceCount } from "./ply";
@@ -176,6 +176,8 @@ export async function runQcChecks(input: QcRunInput): Promise<QcRunResult> {
       }
       checks.push(checkParse(null));
     } catch (e) {
+      // Decoder init failure is ours, not the file's: let the worker retry.
+      if (e instanceof QcInfrastructureError) throw e;
       document = null;
       checks.push(
         checkParse(e instanceof MeshParseError ? e.message : GENERIC_CORRUPT),
