@@ -124,8 +124,8 @@ landing → map/area list (OpenBeta data; flagged areas fuzzed/hidden) → bould
 │ ├─ Auth (OAuth)         │   │ climbs, local climbing orgs. R/O.   │
 │ ├─ Storage (raw +       │   │ Cached in Postgres w/ TTL.          │
 │ │   processed meshes)   │   └─────────────────────────────────────┘
-│ └─ Edge Functions:      │
-│     QC pipeline (upload → validate → convert → compress → GLB)    │
+│ └─ pg_cron + job queue  │
+│   QC = Node route in the Next.js app (ADR 003)                    │
 └─────────────────────────┘
 ```
 
@@ -135,7 +135,7 @@ landing → map/area list (OpenBeta data; flagged areas fuzzed/hidden) → bould
 |---|---|---|
 | Canonical mesh format | GLB (binary glTF 2.0) + Draco/meshopt compression | Web-native, streams into three.js, single file, compresses 5–10x |
 | Accepted uploads | .glb/.gltf, .obj(+.mtl/textures zipped), .ply | Covers Polycam, Scaniverse, RealityScan, Luma export menus |
-| Mesh processing | Edge Function (or small worker) using `gltf-transform`; `assimp`/`obj2gltf` for conversion | Pure-JS pipeline where possible; keeps self-hosting easy |
+| Mesh processing | Node route in the Next.js app, driven by a Postgres job queue ([ADR 003](decisions/003-qc-pipeline-runtime.md): Edge Function limits are too small), using `gltf-transform`; `assimp`/`obj2gltf` for conversion | Pure-JS pipeline where possible; keeps self-hosting easy |
 | Hold anchoring | Position (xyz) + face index + normal on the *canonical* GLB; annotations versioned against a scan content-hash | Survives recompression; invalidates cleanly if mesh is replaced. Enforced in SQL (#26): holds must match the scan's current hash, and replacing a scan's mesh sets `climbs.annotations_stale_at` on its climbs until the holds are re-placed. |
 | OpenBeta coupling | Store `openbeta_area_id` / `openbeta_climb_id` UUIDs + cached snapshot of facts only (name, path, grade, organizations; no prose/photos) | Their data stays theirs; we degrade gracefully if API is down. See [ADR 001](decisions/001-openbeta-api.md) |
 | Grades | V-scale votes, one per user per climb, show distribution not just mean | Matches boulder culture; resists brigading better than ratings |
@@ -176,7 +176,7 @@ Row-level security: contributors edit their own pending items; published items i
 
 ## 9. QC pipeline (the "good enough" check)
 
-**Automated (Edge Function, on upload):**
+**Automated (Node QC route, queued on upload; ADR 003):**
 1. File: extension/magic-bytes match, size ≤ 200 MB raw (self-host and paid plans; hosted Supabase Free caps uploads at 50 MB, which is the hosted limit during development, per [ADR 002](decisions/002-mesh-storage.md) D2).
 2. Parse: mesh loads, ≥ 1 mesh primitive, triangle count in [10k, 5M].
 3. Geometry: bounding box sane (0.3m–30m — it's a boulder, not a pebble or a mountain), not degenerate (volume > 0), < 50% disconnected floater vertices.

@@ -22,7 +22,9 @@ Climbers scan boulders with their phones, upload the renders, and annotate them 
 
 ## Quickstart (dev)
 
-Prereqs: Node 24+, pnpm, [Supabase CLI](https://supabase.com/docs/guides/cli), Docker.
+Prereqs: Node 24+, pnpm, and, for the database, Docker plus the [Supabase CLI](https://supabase.com/docs/guides/cli). No global CLI? Use `npx supabase` wherever this page says `supabase`.
+
+**Just want to see the app?** Skip Supabase. `pnpm install && pnpm dev` is enough for the landing page and `/api/health` (it reports `"supabase": "unconfigured"`); sign-in, upload, review and anything database-backed need the stack below. On a fresh clone, install takes about 35 seconds and the dev server is ready in seconds. The first `supabase start` also downloads the Docker images, which depends on your connection.
 
 ```bash
 git clone https://github.com/sandbagbeta/sandbag && cd sandbag
@@ -31,8 +33,11 @@ supabase start               # local Postgres/Auth/Storage stack (needs Docker)
 cp .env.example .env.local   # then paste the keys printed by `supabase start`
                              # (`supabase status` reprints them any time)
 pnpm seed                    # demo GLB + 1 scan, 2 climbs, holds, paths
+                             # (needs SUPABASE_SERVICE_ROLE_KEY from the same output)
 pnpm dev                     # http://localhost:3000
 ```
+
+Also set `LOCATION_FUZZ_SECRET` in `.env.local` (generate one with `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`). Without it, areas flagged as fuzzed are served as hidden, by design (access privacy fails closed), so a missing secret looks like missing map data rather than an error.
 
 Check the wiring at <http://localhost:3000/api/health> — it reports `"supabase": "configured"` once `.env.local` is filled in. `supabase/config.toml` declares three storage buckets: `uploads` (private, raw contributor scans), `published` (public, QC-approved GLBs) and `originals` (private, raw files of published scans); `supabase start` creates them. `supabase start` also applies `supabase/migrations/`. Run the database tests with `supabase test db`. The QC recovery sweep (retries, lost jobs) needs two Vault secrets so the database can call the app; see [supabase/README.md](supabase/README.md#qc-job-queue).
 
@@ -63,9 +68,41 @@ http://127.0.0.1:54321/auth/v1/callback
 
 **File size depends on where Supabase runs.** The local stack (`supabase start`) and self-hosted setups use the 200 MiB limit in `supabase/config.toml`. **The hosted Supabase Free plan caps every file at 50 MB, and that cap can't be raised** ([file limits](https://supabase.com/docs/guides/storage/uploads/file-limits)). On a hosted Free project, uploads over 50 MB pass the page's 200 MB check and are then rejected by Storage, and the page says so. Pro and above allow up to 500 GB per file, configured in the dashboard. This is accepted for development ([ADR 002](docs/decisions/002-mesh-storage.md) D2).
 
+## Architecture
+
+```mermaid
+flowchart LR
+  Browser["Browser<br/>Next.js UI + react-three-fiber viewer"]
+  subgraph App["Next.js app (Vercel or self-hosted)"]
+    Pages["Pages + server actions"]
+    QC["QC pipeline route<br/>(validate, convert, compress)"]
+    Life["Lifecycle module<br/>(only writer of status)"]
+    Loc["Location formatter<br/>(only source of coordinates)"]
+  end
+  subgraph SB["Supabase"]
+    PG[("Postgres + RLS<br/>incl. QC job queue")]
+    Auth["Auth (GitHub / Google)"]
+    St[("Storage: uploads, published, originals")]
+  end
+  OB["OpenBeta GraphQL API<br/>(read-only, cached in Postgres)"]
+
+  Browser --> Pages
+  Browser -- "TUS upload" --> St
+  Pages --> PG
+  Pages --> Auth
+  Pages --> Loc --> PG
+  PG -- "pg_cron sweep" --> QC
+  QC --> St
+  QC --> Life --> PG
+  Pages --> Life
+  Pages --> OB
+```
+
+The QC route is shown as designed in [ADR 003](docs/decisions/003-qc-pipeline-runtime.md); it runs in Node inside the Next.js app, not as an Edge Function, and is still being built (#16). Climbing metadata (areas, routes, grades of record) lives in OpenBeta; we store only the 3D layer and link to OpenBeta ids. Every coordinate the app outputs goes through the location formatter, which fails closed to `hidden`. Details: [docs/PRD.md §7](docs/PRD.md) and the [ADRs](docs/decisions/).
+
 ## Stack
 
-Next.js (App Router, TypeScript) · three.js via react-three-fiber · Supabase (Postgres + Auth + Storage + Edge Functions) · [OpenBeta](https://openbeta.io) GraphQL API for climbing metadata · Vercel.
+Next.js (App Router, TypeScript) · three.js via react-three-fiber · Supabase (Postgres + Auth + Storage) · [OpenBeta](https://openbeta.io) GraphQL API for climbing metadata · Vercel.
 
 ## Values
 
