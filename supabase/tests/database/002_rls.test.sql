@@ -90,7 +90,7 @@ select throws_ok($$insert into public.grade_votes (climb_id, user_id, grade)
   '42501', null, 'no votes on unpublished climbs');
 select throws_ok($$insert into public.holds (climb_id, scan_content_hash, position, normal, face_index, type)
   values ('30000000-0000-0000-0000-000000000002', repeat('a', 64), '{1,1,0}', '{0,0,1}', 3, 'foot')$$,
-  '42501', null, 'B cannot add holds to A''s pending climb');
+  '42501', null, 'B cannot add holds to A''s pending climb (no direct hold writes)');
 select throws_ok($$insert into public.profiles (id, handle, trust_level)
   values ('00000000-0000-0000-0000-00000000000b', 'user_b2', 'maintainer')$$,
   '42501', null, 'a contributor cannot set trust_level on insert');
@@ -110,12 +110,12 @@ select lives_ok($$insert into storage.objects (bucket_id, name) values
   'A uploads raw into own prefix while uploaded');
 select throws_ok($$insert into storage.objects (bucket_id, name) values ('published', 'x/y.glb')$$,
   '42501', null, 'A cannot write the published bucket');
-select is_empty($$update public.holds set face_index = 9
-  where climb_id = '30000000-0000-0000-0000-000000000001' returning id$$,
-  'published holds are immutable to their author');
-select lives_ok($$insert into public.holds (climb_id, scan_content_hash, position, normal, face_index, type)
+select throws_ok($$update public.holds set face_index = 9
+  where climb_id = '30000000-0000-0000-0000-000000000001'$$,
+  '42501', null, 'holds cannot be updated directly (annotation RPCs only)');
+select throws_ok($$insert into public.holds (climb_id, scan_content_hash, position, normal, face_index, type)
   values ('30000000-0000-0000-0000-000000000002', repeat('a', 64), '{1,1,0}', '{0,0,1}', 2, 'hand')$$,
-  'A adds holds to own pending climb');
+  '42501', null, 'A cannot insert holds directly, even on own pending climb');
 select is((select count(*)::int from public.reviews), 1, 'A reads reviews of own scan');
 
 -- R: reviewer ----------------------------------------------------------------

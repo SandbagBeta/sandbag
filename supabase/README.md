@@ -79,3 +79,18 @@ Migration `20261112000200_scan_attach_notes.sql` (issue #28). `scan_attach_notes
 ## Unique climb names
 
 Migration `20261112000300_climb_name_unique.sql` (issue #23). Unique index `climbs_scan_name_unique` on `(scan_id, lower(regexp_replace(btrim(name), '\s+', ' ', 'g')))`: one climb name per scan, ignoring case and extra whitespace, any status (a rejected climb's name stays taken). It mirrors `normName` in `src/lib/annotations/validate.ts`, which still gives the friendly `name_duplicate` error; the index is the race-proof backstop (`23505`). The migration first renames existing duplicates, keeping the oldest and numbering the rest (`Name (2)`). Edge cases outside ASCII (Unicode whitespace or case folding) can differ between JS and Postgres, so the validator may pass a name the index then refuses: handle `23505` as `name_duplicate`.
+
+## Climb annotation writes (RPC only)
+
+Migration `20261112000500_annotation_rpcs.sql` (issue #22, gaps A and E; decisions in [the issue thread](https://github.com/SandbagBeta/sandbag/issues/22)). Validation needs the decoded mesh, so it runs in TypeScript (`src/lib/annotations/validate.ts`); two functions then write the climb, holds and paths in one transaction. Both are `security definer` and executable by `service_role` only; call them with `supabase.rpc(...)` from server code after validating.
+
+| Function | Behaviour |
+|---|---|
+| `create_climb_annotations(p_user_id, p_scan_id, p_scan_content_hash, p_name, p_description, p_proposed_grade, p_fa_info, p_holds jsonb, p_paths jsonb)` → `uuid` | Creates a `pending_review` climb owned by `p_user_id` plus its holds and paths. |
+| `replace_climb_annotations(p_user_id, p_climb_id, p_scan_content_hash, p_holds jsonb, p_paths jsonb)` → `void` | Replaces all holds and paths of the user's own `pending_review` climb. This is the edit path after a "request changes" verdict (the climb never leaves `pending_review`) and how stale holds are re-placed (#26): holds on the current hash clear `annotations_stale_at`. |
+
+Payloads: `p_holds` is an array of `{position:[x,y,z], normal:[x,y,z], face_index, type, seq_order?}`; the hold's `scan_content_hash` is **not** read from the payload but taken from `p_scan_content_hash`. `p_paths` is an array of `{kind, points}`. `face_index` is a global triangle index in `flattenDocument` order.
+
+Since the service role bypasses RLS, the functions re-check in SQL: the scan is `published` (row locked `for share`) and `p_scan_content_hash` equals its current hash (`23514` `hash_mismatch`/`scan_not_published`), the user owns the climb (`42501`) and it is `pending_review` (`23514` `not_pending`), at least 3 holds, 1 or 2 start holds, one path per kind (`23514`). A duplicate name raises `23505` from the #23 index: treat it as `name_duplicate`. Any failure rolls back everything.
+
+Direct writes are closed: `authenticated` no longer has insert/update/delete on `holds` and `paths`, nor insert on `climbs`. Reads, climb metadata updates (name, description, grade, fa_info) and deleting your own pending climb are unchanged. The functions are not a substitute for the validator: they only backstop its cheap rules, not geometry (surface distance, face range, sequence).
