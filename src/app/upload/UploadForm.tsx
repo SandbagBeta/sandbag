@@ -17,6 +17,7 @@ import {
 } from "@/lib/upload/validate";
 import { readZipEntryNames } from "@/lib/upload/zip";
 import { AttachPicker } from "./AttachPicker";
+import { saveAttachNoteAction } from "./attach-actions";
 import { canResumeScan, createScan, notifyUploadComplete } from "./actions";
 
 type Phase = "idle" | "starting" | "uploading" | "paused" | "error" | "done";
@@ -147,6 +148,12 @@ export function UploadForm(props: {
         return;
       }
       target = created;
+      // Non-fatal: the scan exists, so a failed note must not create a second one.
+      const note = String(form.get("attachNote") ?? "");
+      if (!form.get("areaId") && note.trim()) {
+        const saved = await saveAttachNoteAction(created.scanId, note);
+        if (!saved.ok) setMessage(`Upload started, but ${saved.error}`);
+      }
     }
 
     const { scanId } = target;

@@ -17,6 +17,7 @@ import {
 import { loadScanReport } from "@/lib/scan-report/load";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
+import { loadAttachNote } from "@/lib/upload/attach-note";
 import { retryScan } from "./actions";
 
 export const metadata: Metadata = {
@@ -40,6 +41,7 @@ export default async function ScanStatusPage({
   const report = await loadScanReport(supabase, id, data.user.id);
   if (!report) notFound();
   const { scan, events, reviews, retriedBy } = report;
+  const attachNote = await loadAttachNote(supabase, id);
   const feedback = latestFeedback(reviews);
   const groups = groupChecks(scan.qc_report);
   const retryable = canRetry(scan.status, feedback) && !retriedBy;
@@ -76,6 +78,18 @@ export default async function ScanStatusPage({
           </h2>
           <p className="mt-2 whitespace-pre-wrap">
             {feedback.reason ?? "The reviewer didn't leave a reason."}
+          </p>
+        </section>
+      )}
+
+      {attachNote && (
+        <section aria-labelledby="attach-note">
+          <h2 id="attach-note" className="text-xl font-semibold">
+            Your note for reviewers
+          </h2>
+          <p className="mt-2 whitespace-pre-wrap">{attachNote}</p>
+          <p className="mt-1 text-sm text-stone-600 dark:text-stone-400">
+            Private: only you and reviewers can see this.
           </p>
         </section>
       )}

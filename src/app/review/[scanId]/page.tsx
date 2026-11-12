@@ -4,6 +4,7 @@ import { forbidden, notFound } from "next/navigation";
 import { BoulderViewer } from "@/components/viewer";
 import { CHECKLIST, canReviewInUi, loadReviewScan } from "@/lib/review/queue";
 import { createServiceClient } from "@/lib/supabase/service";
+import { loadAttachNote } from "@/lib/upload/attach-note";
 import { ReviewForm } from "../ReviewForm";
 import { getReviewer } from "../session";
 
@@ -36,6 +37,8 @@ export default async function ReviewScanPage({
   const scan = await loadReviewScan(supabase, scanId);
   if (!scan) notFound();
   const src = await pendingGlbUrl(scan.glb_path);
+  // Session client, not service role: RLS limits the note to reviewers/uploader.
+  const attachNote = await loadAttachNote(supabase, scan.id);
   const checks = scan.qc_report?.checks ?? [];
 
   return (
@@ -61,6 +64,19 @@ export default async function ReviewScanPage({
         <p className="rounded border border-stone-300 p-4 dark:border-stone-700">
           The mesh is not available to preview yet.
         </p>
+      )}
+
+      {attachNote && (
+        <section aria-labelledby="attach-note">
+          <h2 id="attach-note" className="text-xl font-semibold">
+            Uploader&apos;s note (private)
+          </h2>
+          <p className="mt-2 whitespace-pre-wrap">{attachNote}</p>
+          <p className="mt-1 text-sm text-stone-600 dark:text-stone-400">
+            The uploader couldn&apos;t find this boulder in OpenBeta. Don&apos;t
+            copy this text into public fields.
+          </p>
+        </section>
       )}
 
       <section aria-labelledby="qc">

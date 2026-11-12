@@ -135,18 +135,40 @@ export function AttachPicker() {
       <p role="status" className={muted}>
         {note}
       </p>
-      <p className={muted}>
-        Can&apos;t find it? Upload without attaching, and{" "}
-        <a
-          href="https://openbeta.io/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline"
-        >
-          add the area or boulder on OpenBeta
-        </a>{" "}
-        first.
-      </p>
+      {!area && (
+        <details className="text-sm">
+          <summary className="cursor-pointer underline">
+            Can&apos;t find it?
+          </summary>
+          <div className="mt-2 flex flex-col gap-2">
+            <label htmlFor={`${id}-note`} className="flex flex-col gap-1">
+              Describe the boulder or area in words
+              <textarea
+                id={`${id}-note`}
+                name="attachNote"
+                maxLength={500}
+                rows={3}
+                className={field}
+                aria-describedby={`${id}-note-help`}
+              />
+            </label>
+            <p id={`${id}-note-help`} className={muted}>
+              Only you and reviewers see this, and a reviewer will match it.
+              Please don&apos;t include coordinates or directions to a closed or
+              sensitive spot. You can also{" "}
+              <a
+                href="https://openbeta.io/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline"
+              >
+                add the area or boulder on OpenBeta
+              </a>
+              .
+            </p>
+          </div>
+        </details>
+      )}
     </div>
   );
 }
