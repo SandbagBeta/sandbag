@@ -12,6 +12,15 @@ import {
   TransitionConflictError,
 } from "./errors";
 import { insertReview, readOne, undoReview, UUID } from "./internal";
+import {
+  deleteDerivedObjects,
+  publishScanObjects,
+  PublishObjectsError,
+  unpublishScanObjects,
+  type PublishedObjects,
+} from "./publish";
+import { storageFor } from "../storage";
+import type { StorageAdapter } from "../storage/types";
 import { LifecycleError } from "./transitions";
 
 /**
@@ -105,6 +114,7 @@ export function refuse(code: ReviewRefusal, message: string): never {
 export async function submitReview(
   db: SupabaseClient,
   input: ReviewInput,
+  deps: { storage?: StorageAdapter } = {},
 ): Promise<ReviewResult> {
   const { reviewerId, subjectType, subjectId, verdict } = input;
   const reason = input.reason?.trim() || null;
@@ -136,6 +146,8 @@ export async function submitReview(
   }
 
   let area: { ancestors_changed_at: string | null } | null = null;
+  // Set for a scan approval: the canonical GLB that must be published first.
+  let mesh: { glb_path: string; content_hash: string } | null = null;
   if (subjectType === "area") {
     area = await readOne(
       db,
@@ -181,6 +193,10 @@ export async function submitReview(
     }
     if (verdict === "approve" && "glb_path" in subject) {
       assertPublishable(subject);
+      mesh = {
+        glb_path: subject.glb_path as string,
+        content_hash: subject.content_hash as string,
+      };
     }
   }
 
@@ -216,21 +232,41 @@ export async function submitReview(
 
   const to = VERDICT_TARGET[verdict];
   if (!to) return { review, status: "pending_review" };
+
+  // A scan approval first makes its mesh public (ADR 002 §3, issue #116):
+  // copy, verify, then write the status. If the copy fails nothing has taken
+  // effect, so the review row is removed like on a CAS conflict.
+  const storage = deps.storage ?? storageFor(db);
+  let published: PublishedObjects | null = null;
+  if (subjectType === "scan" && mesh) {
+    try {
+      published = await publishScanObjects(storage, { id: subjectId, ...mesh });
+    } catch (err) {
+      if (err instanceof PublishObjectsError) return undo(err);
+      throw err;
+    }
+  }
   try {
     await applyTransition(db, {
       kind: subjectType,
       id: subjectId,
       from: "pending_review",
       to,
-    });
+      ...(published ? { patch: { glb_path: published.glbKey } } : {}),
+    } as Parameters<typeof applyTransition>[1]);
   } catch (err) {
     if (
       err instanceof TransitionConflictError ||
       err instanceof MissingMeshError
     ) {
+      // Lost a race: the scan is not published, so neither may its mesh be.
+      if (published) await unpublishScanObjects(storage, published);
       return undo(err);
     }
+    // Unknown outcome (DB or network): keep the public objects, since the
+    // status change may have applied.
     throw err;
   }
+  if (published) await deleteDerivedObjects(storage, published);
   return { review, status: to };
 }

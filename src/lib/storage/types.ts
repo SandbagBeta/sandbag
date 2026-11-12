@@ -38,6 +38,7 @@ export interface ListedObject {
 
 export interface PutOptions {
   contentType: string;
+  /** A full Cache-Control header value. The Supabase driver can only keep its max-age. */
   cacheControl?: string;
   /** Overwrite an existing object. Default false. */
   upsert?: boolean;

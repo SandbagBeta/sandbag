@@ -21,9 +21,9 @@ function fakeClient(opts: { failWith?: { message: string } } = {}) {
         async upload(
           key: string,
           body: Uint8Array,
-          o: { contentType: string; upsert: boolean },
+          o: { contentType: string; upsert: boolean; cacheControl?: string },
         ) {
-          calls("upload", name, key);
+          calls("upload", name, key, o.cacheControl);
           if (opts.failWith) return { data: null, error: opts.failWith };
           if (b.has(key) && !o.upsert) {
             return {
@@ -104,6 +104,39 @@ const bytes = (...n: number[]) => new Uint8Array(n);
 const KEY = "scans/abc/def.glb";
 
 describe("Supabase storage driver (#50)", () => {
+  it("passes only the max-age seconds to supabase-js, which prefixes max-age= itself", async () => {
+    const { client, calls } = fakeClient();
+    const s = createSupabaseStorage(client, BASE);
+    const ct = { contentType: "x/y" };
+    await s.put({ bucket: "published", key: "a/1.glb" }, bytes(1), {
+      ...ct,
+      cacheControl: "public, max-age=31536000, immutable",
+    });
+    await s.put({ bucket: "published", key: "a/2.glb" }, bytes(1), ct);
+    await s.put({ bucket: "published", key: "a/3.glb" }, bytes(1), {
+      ...ct,
+      cacheControl: "no-store",
+    });
+    expect(calls).toHaveBeenCalledWith(
+      "upload",
+      "published",
+      "a/1.glb",
+      "31536000",
+    );
+    expect(calls).toHaveBeenCalledWith(
+      "upload",
+      "published",
+      "a/2.glb",
+      undefined,
+    );
+    expect(calls).toHaveBeenCalledWith(
+      "upload",
+      "published",
+      "a/3.glb",
+      undefined,
+    );
+  });
+
   it("round-trips put, head and download", async () => {
     const { client } = fakeClient();
     const s = createSupabaseStorage(client, BASE);

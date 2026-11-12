@@ -1,6 +1,8 @@
+import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { MissingMeshError } from "./apply";
 import { createFakeDb } from "./fake-db";
+import { createFakeStorage } from "./fake-storage";
 import {
   AreaFlagConflictError,
   ReviewNotAllowedError,
@@ -19,6 +21,13 @@ const CLIMB = id(11);
 const AREA = id(12);
 const FLAGGED_AT = "2026-11-01T00:00:00+00:00";
 
+// The canonical GLB QC wrote to the private bucket, named as the worker names it.
+const GLB = new TextEncoder().encode("canonical-glb-bytes");
+const HASH = createHash("sha256").update(GLB).digest("hex");
+const DERIVED = `${AUTHOR}/${SCAN}/derived/${HASH}.glb`;
+const PUBLISHED = `${SCAN}/${HASH}.glb`;
+const stored = () => createFakeStorage({ [`uploads/${DERIVED}`]: GLB });
+
 function seed(
   overrides: { scan?: object; climb?: object; area?: object } = {},
 ) {
@@ -33,8 +42,8 @@ function seed(
         id: SCAN,
         status: "pending_review",
         uploader_id: AUTHOR,
-        glb_path: "published/s.glb",
-        content_hash: "b".repeat(64),
+        glb_path: DERIVED,
+        content_hash: HASH,
         ...overrides.scan,
       },
     ],
@@ -76,6 +85,7 @@ describe("submitReview: scans and climbs", () => {
       const res = await submitReview(
         db.client,
         review({ subjectType: t, subjectId: sid }),
+        { storage: stored().adapter },
       );
       expect(res.status).toBe("published");
       expect(db.row(table).status).toBe("published");
@@ -223,20 +233,27 @@ describe("submitReview: scans and climbs", () => {
     db.beforeNext("scans", "update", () => {
       db.row("scans").status = "rejected";
     });
-    await expect(submitReview(db.client, review({}))).rejects.toThrow(
-      /Conflict/,
-    );
+    const fs = stored();
+    await expect(
+      submitReview(db.client, review({}), { storage: fs.adapter }),
+    ).rejects.toThrow(/Conflict/);
     expect(db.row("scans").status).toBe("rejected");
     expect(db.tables.reviews).toHaveLength(0);
+    // The scan is not published, so its mesh must not be either.
+    expect(fs.has("published", PUBLISHED)).toBe(false);
+    expect(fs.has("uploads", DERIVED)).toBe(true);
   });
 
   it("keeps the review row when the status write fails with an unknown outcome", async () => {
     const db = seed();
     db.failNext("scans", "update", "timeout");
-    await expect(submitReview(db.client, review({}))).rejects.toThrow(
-      /timeout/,
-    );
+    const fs = stored();
+    await expect(
+      submitReview(db.client, review({}), { storage: fs.adapter }),
+    ).rejects.toThrow(/timeout/);
     expect(db.tables.reviews).toHaveLength(1);
+    // The status change may have applied: keep the public copy.
+    expect(fs.has("published", PUBLISHED)).toBe(true);
   });
 
   it("never changes status when the review insert fails", async () => {
