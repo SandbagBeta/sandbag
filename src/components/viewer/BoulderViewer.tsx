@@ -69,7 +69,11 @@ export function BoulderViewer({
           <directionalLight position={[-3, 2, -4]} intensity={0.4} />
           <Suspense fallback={null}>
             {bvh ? (
-              <Bvh firstHitOnly>
+              // `indirect` keeps the geometry's index buffer in file order. The
+              // default BVH reorders it in place, so a hit's faceIndex would no
+              // longer match the server's face numbering (flattenDocument) and
+              // every hold would be rejected off_surface.
+              <Bvh firstHitOnly indirect>
                 <ScanModel src={src} controlsRef={controlsRef} onFit={setFit} />
               </Bvh>
             ) : (
