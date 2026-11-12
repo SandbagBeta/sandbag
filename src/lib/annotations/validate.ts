@@ -53,6 +53,8 @@ export type AnnotationIssueCode =
   | "face_out_of_range"
   | "off_surface"
   | "bad_sequence"
+  /** A foot hold carries a sequence number; feet are unordered. */
+  | "foot_in_sequence"
   /** Malformed payload field (shape, range, non-unit normal). */
   | "bad_payload";
 
@@ -153,11 +155,22 @@ export function validateClimbAnnotations(
       code: "start_holds_count",
       message: `Climbs need ${MIN_START_HOLDS}-${MAX_START_HOLDS} start holds (got ${starts}).`,
     });
-  if (sub.holds.length < MIN_TOTAL_HOLDS)
+  // Foot holds are optional single points: they don't count toward the minimum
+  // and they have no place in the sequence (user decision, 2026-11-12).
+  const nonFoot = sub.holds.filter((h) => h.type !== "foot");
+  if (nonFoot.length < MIN_TOTAL_HOLDS)
     issues.push({
       code: "too_few_holds",
-      message: `Climbs need at least ${MIN_TOTAL_HOLDS} holds (got ${sub.holds.length}).`,
+      message: `Add at least ${MIN_TOTAL_HOLDS} start, hand or finish holds (foot holds don't count). You have ${nonFoot.length}.`,
     });
+  for (const h of sub.holds) {
+    if (h.type === "foot" && h.seq_order != null)
+      issues.push({
+        code: "foot_in_sequence",
+        message: `Foot hold ${h.id} has a sequence number. Foot holds are not part of the line and have no order.`,
+        holdId: h.id,
+      });
+  }
 
   const ids = new Set<string>();
   const faces = ctx.mesh.indices.length / 3;
@@ -204,8 +217,9 @@ export function validateClimbAnnotations(
       });
   }
 
-  // Sequence: seq_order values, where present, are unique and run 0..k-1.
-  const seqs = sub.holds
+  // Sequence: seq_order values of the non-foot holds, where present, are
+  // unique and run 0..k-1. (A foot hold with one is reported above.)
+  const seqs = nonFoot
     .map((h) => h.seq_order)
     .filter((s): s is number => s != null)
     .sort((a, b) => a - b);

@@ -17,7 +17,7 @@ const ctx: ValidationContext = {
   mesh,
   existingNames: ["Taken"],
 };
-const hold = (id: string, type: "start" | "hand" | "finish") => ({
+const hold = (id: string, type: "start" | "hand" | "foot" | "finish") => ({
   id,
   scan_content_hash: H,
   position: [1, 0, 1] as Vec3,
@@ -36,6 +36,61 @@ describe("annotation validity", () => {
   it("accepts a valid climb", () => {
     expect(codes(good())).toEqual([]);
     expect(() => assertValidClimbAnnotations(good(), ctx)).not.toThrow();
+  });
+
+  describe("foot holds (unordered, optional, not counted)", () => {
+    const withFeet = (...feet: string[]): ClimbSubmission => ({
+      name: "Fresh",
+      holds: [
+        hold("1", "start"),
+        hold("2", "hand"),
+        hold("3", "finish"),
+        ...feet.map((id) => hold(id, "foot")),
+      ],
+    });
+
+    it("are optional: a climb with none, and a climb with several, are both fine", () => {
+      expect(codes(withFeet())).toEqual([]);
+      expect(codes(withFeet("f1", "f2", "f3"))).toEqual([]);
+    });
+
+    it("do not count toward the minimum of 3 holds", () => {
+      const s: ClimbSubmission = {
+        name: "x",
+        holds: [
+          hold("1", "start"),
+          hold("2", "hand"),
+          hold("f1", "foot"),
+          hold("f2", "foot"),
+        ],
+      };
+      expect(codes(s)).toEqual(["too_few_holds"]);
+      const message = validateClimbAnnotations(s, ctx)[0]!.message;
+      expect(message).toMatch(/foot holds don't count/);
+      expect(message).toMatch(/You have 2/);
+    });
+
+    it("are not part of the sequence: numbering the others 0..n-1 is enough", () => {
+      const s = withFeet("f1", "f2");
+      s.holds[0]!.seq_order = 0;
+      s.holds[1]!.seq_order = 1;
+      s.holds[2]!.seq_order = 2;
+      expect(codes(s)).toEqual([]);
+    });
+
+    it("are rejected if they carry a sequence number, naming the hold", () => {
+      const s = withFeet("f1");
+      s.holds[3]!.seq_order = 3;
+      const issues = validateClimbAnnotations(s, ctx);
+      expect(issues.map((i) => i.code)).toEqual(["foot_in_sequence"]);
+      expect(issues[0]!.holdId).toBe("f1");
+    });
+
+    it("still must lie on the mesh surface", () => {
+      const s = withFeet("f1");
+      s.holds[3]!.position = [1, 0.5, 1];
+      expect(codes(s)).toEqual(["off_surface"]);
+    });
   });
 
   it("requires 1-2 start holds", () => {

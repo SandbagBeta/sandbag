@@ -38,7 +38,12 @@ export interface Hold {
    */
   face_index: number;
   type: HoldType;
-  /** Optional ordering along the climb (0-based), when the sequence matters. */
+  /**
+   * Order along the climbing line (0-based) for start/hand/finish holds, when
+   * the sequence matters. Always null for `foot` holds: feet are optional single
+   * points of one climb, not part of the line, and don't count toward the
+   * minimum of 3 holds.
+   */
   seq_order?: number | null;
 }
 

@@ -170,9 +170,26 @@ export function parseSaveClimbInput(raw: unknown): ParseResult {
           normal,
           face_index: h.face_index as number,
           type: h.type as HoldType,
-          seq_order: seq,
+          // Foot holds are unordered. An old draft may still carry a number
+          // on one; drop it here rather than fail the user's save over it.
+          seq_order: h.type === "foot" ? null : seq,
         });
     }
+  }
+
+  // The sequence is a relative order. If feet used to sit in it, clearing their
+  // numbers leaves gaps in the others (0, 2, 4): close them, keeping the order,
+  // rather than fail the save. Duplicate numbers are left for the validator.
+  const numbered = holds.filter(
+    (h) => h.type !== "foot" && h.seq_order !== null,
+  );
+  const seen = new Set(numbered.map((h) => h.seq_order));
+  if (seen.size === numbered.length) {
+    [...numbered]
+      .sort((a, b) => (a.seq_order as number) - (b.seq_order as number))
+      .forEach((h, i) => {
+        h.seq_order = i;
+      });
   }
 
   const paths: SavePath[] = [];

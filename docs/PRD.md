@@ -153,7 +153,7 @@ scans            id, uploader_id, openbeta_area_id?, openbeta_climb_id?,
 climbs           id, scan_id, name, description, proposed_grade, fa_info?,
                  status (same lifecycle), created_by
 holds            id, climb_id, scan_content_hash, position vec3, normal vec3,
-                 face_index, type: start|hand|foot|finish, seq_order?
+                 face_index, type: start|hand|foot|finish, seq_order? (null for foot)
 paths            id, climb_id, kind: line|topout|downclimb, points jsonb  (unique per climb+kind)
 grade_votes      climb_id, user_id, grade, created_at  (unique per user+climb)
 scan_status_events  id, scan_id, from_status?, to_status, created_at  (trigger-written timeline)
