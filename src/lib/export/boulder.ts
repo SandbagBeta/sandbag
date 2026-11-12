@@ -5,6 +5,32 @@ import { createZip, readZip } from "./zip";
 /** Bump on any breaking change to the JSON layout; documented in docs/export-format.md. */
 export const EXPORT_SCHEMA_VERSION = 1;
 
+/**
+ * A climb as exported: no `created_by` (a user id; handles appear only in
+ * ATTRIBUTION.txt) and no internal flags. Built from an explicit field list so
+ * a column added to `Climb` later can't leak into the zip.
+ */
+export type PublicClimb = Pick<
+  Climb,
+  | "id"
+  | "scan_id"
+  | "name"
+  | "description"
+  | "proposed_grade"
+  | "fa_info"
+  | "status"
+>;
+
+const publicClimb = (c: Climb): PublicClimb => ({
+  id: c.id,
+  scan_id: c.scan_id,
+  name: c.name,
+  description: c.description,
+  proposed_grade: c.proposed_grade,
+  fa_info: c.fa_info,
+  status: c.status,
+});
+
 export interface Contributor {
   handle: string;
   role: "scan" | "climb";
@@ -62,7 +88,7 @@ export function buildBoulderExport(input: BoulderExportInput): Uint8Array {
   return createZip([
     { name: "manifest.json", data: json(manifest) },
     { name: "mesh.glb", data: glb },
-    { name: "climbs.json", data: json(input.climbs) },
+    { name: "climbs.json", data: json(input.climbs.map(publicClimb)) },
     { name: "holds.json", data: json(input.holds) },
     { name: "paths.json", data: json(input.paths) },
     {
@@ -86,7 +112,7 @@ export function buildBoulderExport(input: BoulderExportInput): Uint8Array {
 
 export interface ParsedBoulderExport {
   manifest: { schema_version: number; scan: BoulderExportInput["scan"] };
-  climbs: Climb[];
+  climbs: PublicClimb[];
   holds: Hold[];
   paths: ClimbPath[];
   glb: Uint8Array;
@@ -115,7 +141,7 @@ export function parseBoulderExport(zip: Uint8Array): ParsedBoulderExport {
   }
   return {
     manifest,
-    climbs: read<Climb[]>("climbs.json"),
+    climbs: read<PublicClimb[]>("climbs.json"),
     holds,
     paths: read<ClimbPath[]>("paths.json"),
     glb,

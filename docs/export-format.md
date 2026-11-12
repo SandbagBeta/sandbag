@@ -6,7 +6,7 @@
 |---|---|
 | `manifest.json` | `schema_version`, `exported_at`, license, scan metadata (no coordinates, no uploader id) |
 | `mesh.glb` | Canonical GLB; its sha256 equals `scan.content_hash` |
-| `climbs.json` / `holds.json` / `paths.json` | Published climbs and their mesh-local annotations |
+| `climbs.json` / `holds.json` / `paths.json` | Published climbs (`id`, `scan_id`, `name`, `description`, `proposed_grade`, `fa_info`, `status`; never the creator's user id) and their mesh-local annotations |
 | `grades.json` | Proposed grade per climb (vote aggregates land with #24) |
 | `LICENSE.txt`, `ATTRIBUTION.txt` | CC BY-SA 4.0 notice and contributor handles |
 
