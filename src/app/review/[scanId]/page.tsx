@@ -6,7 +6,9 @@ import { CHECKLIST, canReviewInUi, loadReviewScan } from "@/lib/review/queue";
 import { storageFor } from "@/lib/storage";
 import { createServiceClient } from "@/lib/supabase/service";
 import { loadAttachNote } from "@/lib/upload/attach-note";
+import { longestSideFromQc } from "@/lib/review/scale";
 import { ReviewForm } from "../ReviewForm";
+import { ScaleControl } from "../ScaleControl";
 import { getReviewer } from "../session";
 
 export const metadata: Metadata = {
@@ -61,6 +63,7 @@ export default async function ReviewScanPage({
         <BoulderViewer
           src={src}
           label="3D scan under review"
+          scale={scan.scale_factor}
           className="h-96 w-full rounded border border-stone-300 dark:border-stone-700"
         >
           <p>3D scan under review. The QC report below describes it in text.</p>
@@ -101,6 +104,12 @@ export default async function ReviewScanPage({
           </ul>
         )}
       </section>
+
+      <ScaleControl
+        scanId={scan.id}
+        longestSide={longestSideFromQc(scan.qc_report)}
+        currentFactor={scan.scale_factor}
+      />
 
       <ReviewForm subjectId={scan.id} checklist={CHECKLIST} />
     </main>

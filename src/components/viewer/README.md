@@ -144,6 +144,12 @@ the scaled group, and annotate picks divide the hit point by the scale
 multiplies stored positions back by the scale. Invalid values fall back to 1
 (`safeScaleFactor`). Pages load `scale_factor` with the scan row.
 
+On `/review/[scanId]` the maintainer sets it with `ScaleControl`
+(`src/app/review/ScaleControl.tsx`; parsing, help text and failure help in
+`src/lib/review/scale.ts`; the write is lifecycle `setScanScale`). It shows the
+QC-measured longest side and the resulting real size, and the preview above
+rescales after saving.
+
 ## Marker size and one-sided scans (issue #133)
 
 - Scans come in arbitrary file units, so marker geometry, surface offsets,
