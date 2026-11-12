@@ -172,8 +172,8 @@ export function checkScale(extents: readonly [number, number, number]): Result {
   if (longest < SCALE_SOFT_LOW_M || longest > SCALE_SOFT_HIGH_M) {
     const hint =
       longest < SCALE_SOFT_LOW_M
-        ? "small for a boulder. Check the export units are metres."
-        : "large for a boulder. Check the export units are metres and that the scan is cropped to the boulder.";
+        ? "small for a boulder (most are 2 m or more). Check you exported in metres; a wrongly sized scan makes hold markers and distances the wrong size. If the size is right, nothing to do: a reviewer checks the scale before publishing and can correct it."
+        : "large for a boulder. Check you exported in metres and that the scan is cropped to the boulder. If the size is right, nothing to do: a reviewer checks the scale before publishing and can correct it.";
     return {
       id: "scale",
       pass: false,

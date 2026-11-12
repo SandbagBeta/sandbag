@@ -54,6 +54,7 @@ function scan(n: number, handle = `user${n}`): DatasetScanInput {
       content_hash: hash,
       tri_count: 100,
       texture_res: 2048,
+      scale_factor: 1,
       capture_app: "Polycam",
       captured_at: null,
       license: "CC-BY-SA-4.0",
@@ -97,6 +98,7 @@ describe("buildDatasetFiles (#33)", () => {
     expect(manifest.scans[0]).toMatchObject({
       glb_file: "scans/00000001-0000-4000-8000-000000000000/mesh.glb",
       hold_count: 1,
+      scale_factor: 1,
     });
   });
 

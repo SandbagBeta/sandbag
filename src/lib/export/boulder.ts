@@ -45,6 +45,7 @@ export interface BoulderExportInput {
     | "content_hash"
     | "tri_count"
     | "texture_res"
+    | "scale_factor"
     | "capture_app"
     | "captured_at"
     | "license"

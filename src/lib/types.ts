@@ -116,6 +116,15 @@ export interface Scan {
   tri_count: number | null;
   texture_res: number | null;
   qc_report: QcReport | null;
+  /**
+   * Reviewed scale: real size = size in the GLB * `scale_factor`. 1 until a
+   * maintainer changes it during review (`setScanScale`). The GLB and its hash
+   * never change. See `ScanScale`.
+   */
+  scale_factor: number;
+  /** The maintainer who last set `scale_factor`; null if never set or their account was deleted. */
+  scale_set_by: string | null;
+  scale_set_at: string | null;
   /** The failed or rejected scan this one replaces; set server-side (#17). */
   retry_of: string | null;
   capture_app: string | null;
@@ -264,3 +273,22 @@ export interface ScanAttachNote {
   note: string;
   updated_at: string;
 }
+
+/**
+ * How to apply a scan's reviewed scale (#134). The canonical GLB, hold
+ * positions, `face_index` and the validator all stay in the GLB's own frame;
+ * the factor only converts that frame to real metres:
+ *   real distance (m) = distance in the GLB frame * scale_factor.
+ * Viewers scale the scene by `scale_factor` for display and size markers and
+ * distance labels from the scaled result. Exports carry `scale_factor` beside
+ * the unchanged positions so consumers can do the same.
+ */
+export interface ScanScale {
+  scale_factor: number;
+  scale_set_by: string | null;
+  scale_set_at: string | null;
+}
+
+/** Bounds enforced by the `scans.scale_factor` check and by `setScanScale`. */
+export const SCALE_FACTOR_MIN = 0.001;
+export const SCALE_FACTOR_MAX = 1000;

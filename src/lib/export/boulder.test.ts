@@ -33,6 +33,7 @@ const input = {
     content_hash: hash,
     tri_count: 1,
     texture_res: null,
+    scale_factor: 1,
     capture_app: "x",
     captured_at: null,
     license: "CC-BY-SA-4.0" as const,
@@ -65,6 +66,7 @@ describe("boulder export", () => {
     expect(parsed.holds).toEqual(input.holds);
     expect(parsed.paths).toEqual(input.paths);
     expect(parsed.manifest.schema_version).toBe(1);
+    expect(parsed.manifest.scan.scale_factor).toBe(1);
   });
 
   it("includes license and a de-duplicated attribution list", () => {

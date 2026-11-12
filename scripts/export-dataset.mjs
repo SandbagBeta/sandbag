@@ -72,7 +72,7 @@ async function fetchIn(table, columns, column, ids) {
 async function main() {
   const scanRows = await fetchAll(
     "scans",
-    "id, openbeta_area_id, openbeta_climb_id, content_hash, tri_count, texture_res, capture_app, captured_at, license, glb_path, uploader_id",
+    "id, openbeta_area_id, openbeta_climb_id, content_hash, tri_count, texture_res, scale_factor, capture_app, captured_at, license, glb_path, uploader_id",
     (q) => q.eq("status", "published"),
   );
   const scans = scanRows.filter((s) => {

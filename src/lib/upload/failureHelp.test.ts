@@ -53,7 +53,7 @@ function fakeDb(insertError: unknown = null, rows: unknown[] = []) {
 }
 
 const report = (checks: QcReport["checks"]): QcReport => ({
-  pipeline_version: "qc-1.1.0",
+  pipeline_version: "qc-1.2.0",
   checks,
   extents_m: null,
 });
