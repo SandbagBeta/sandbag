@@ -1,3 +1,5 @@
+import type { UploadFailureCode } from "./failureHelp";
+
 /**
  * Client- and server-side checks for a raw scan before anything is uploaded
  * (#15). QC (#16) re-checks magic bytes and parses the mesh; this only
@@ -25,7 +27,7 @@ export const ACCEPT_ATTR = ".glb,.gltf,.ply,.zip";
 
 export type FileCheck =
   | { ok: true; kind: UploadKind; contentType: string }
-  | { ok: false; error: string };
+  | { ok: false; error: string; code: UploadFailureCode };
 
 /** Extension after the last dot, lower-cased; "" if none. */
 export function extensionOf(name: string): string {
@@ -44,21 +46,24 @@ export function checkUploadFile(file: {
       ok: false,
       error:
         "OBJ files need their .mtl and textures: zip them together and upload the .zip.",
+      code: "obj_needs_zip",
     };
   }
   if (!(ext in CONTENT_TYPES)) {
     return {
       ok: false,
       error: `".${ext || "(none)"}" isn't supported. Upload a .glb, .gltf, .ply, or a .zip with an .obj or .gltf and its textures.`,
+      code: "unsupported_file",
     };
   }
   if (!Number.isSafeInteger(file.size) || file.size <= 0) {
-    return { ok: false, error: "That file is empty." };
+    return { ok: false, error: "That file is empty.", code: "empty_file" };
   }
   if (file.size > MAX_UPLOAD_BYTES) {
     return {
       ok: false,
       error: `That file is ${formatBytes(file.size)}; the limit is 200 MB.`,
+      code: "file_too_large",
     };
   }
   const kind = ext as UploadKind;

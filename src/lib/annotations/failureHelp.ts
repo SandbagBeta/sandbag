@@ -17,6 +17,8 @@ export type FailureStage =
   | "validation"
   | "access"
   | "database"
+  | "upload"
+  | "qc"
   | "unknown";
 
 export const STAGE_LABELS: Readonly<Record<FailureStage, string>> = {
@@ -27,6 +29,8 @@ export const STAGE_LABELS: Readonly<Record<FailureStage, string>> = {
   validation: "Checking your holds and lines",
   access: "Checking you can edit this climb",
   database: "Saving to the database",
+  upload: "Uploading your scan",
+  qc: "Automated checks on your scan",
   unknown: "Saving your climb",
 };
 

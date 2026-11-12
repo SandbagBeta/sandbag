@@ -2,6 +2,9 @@
 
 import { flagAreaSensitive } from "../../lib/location";
 import { createClient } from "../../lib/supabase/server";
+import { createServiceClient } from "../../lib/supabase/service";
+import { uploadFailureHelp } from "../../lib/upload/failureHelp";
+import { withUploadHelp } from "../../lib/upload/failures";
 import { enqueueQc } from "../../lib/upload/pipeline";
 import {
   createScanForUpload,
@@ -13,6 +16,8 @@ import {
 const SIGNED_OUT = {
   ok: false as const,
   error: "Your session expired. Sign in again.",
+  code: "session_expired" as const,
+  help: uploadFailureHelp("session_expired"),
 };
 
 // The user always comes from the session cookie, never from the arguments.
@@ -25,7 +30,7 @@ async function session() {
 export async function createScan(input: CreateScanInput) {
   const { supabase, user } = await session();
   if (!user) return SIGNED_OUT;
-  return createScanForUpload(
+  const result = await createScanForUpload(
     supabase,
     user.id,
     {
@@ -37,19 +42,28 @@ export async function createScan(input: CreateScanInput) {
     },
     { flagArea: (flag) => flagAreaSensitive(flag) },
   );
+  return withUploadHelp(createServiceClient, result, { userId: user.id });
 }
 
 /** Whether a stored resumable upload may continue into this scan. */
 export async function canResumeScan(scanId: string) {
   const { supabase, user } = await session();
   if (!user) return SIGNED_OUT;
-  return loadOwnUploadedScan(supabase, user.id, String(scanId));
+  const result = await loadOwnUploadedScan(supabase, user.id, String(scanId));
+  return withUploadHelp(createServiceClient, result, {
+    userId: user.id,
+    scanId: String(scanId),
+  });
 }
 
 export async function notifyUploadComplete(scanId: string) {
   const { supabase, user } = await session();
   if (!user) return SIGNED_OUT;
-  return verifyUploadComplete(supabase, user.id, String(scanId), {
+  const result = await verifyUploadComplete(supabase, user.id, String(scanId), {
     enqueue: enqueueQc,
+  });
+  return withUploadHelp(createServiceClient, result, {
+    userId: user.id,
+    scanId: String(scanId),
   });
 }

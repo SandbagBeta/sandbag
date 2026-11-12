@@ -7,6 +7,7 @@ import {
   UPLOADS_BUCKET,
 } from "./keys";
 import { storageFor } from "../storage";
+import type { UploadFailureCode } from "./failureHelp";
 import { checkUploadFile, MAX_UPLOAD_BYTES } from "./validate";
 
 /**
@@ -16,7 +17,8 @@ import { checkUploadFile, MAX_UPLOAD_BYTES } from "./validate";
  * only the lifecycle module moves them on.
  */
 
-export type Result<T> = ({ ok: true } & T) | { ok: false; error: string };
+export type Result<T> =
+  ({ ok: true } & T) | { ok: false; error: string; code?: UploadFailureCode };
 
 export interface CreateScanInput {
   fileName: string;
@@ -44,7 +46,11 @@ function optionalUuid(
   const v = raw?.trim() ?? "";
   if (!v) return { ok: true, value: null };
   if (!isUuid(v))
-    return { ok: false, error: `${label} must be a UUID like 0f8c…-…-…` };
+    return {
+      ok: false,
+      error: `${label} must be a UUID like 0f8c…-…-…`,
+      code: "bad_area_id",
+    };
   return { ok: true, value: v.toLowerCase() };
 }
 
@@ -68,6 +74,7 @@ export async function createScanForUpload(
       return {
         ok: false,
         error: "Add the OpenBeta area id so we know which area to hide.",
+        code: "area_needed" as const,
       };
     }
     // Before the scan exists: if the flag can't land, nothing is uploaded.
@@ -83,6 +90,7 @@ export async function createScanForUpload(
         ok: false,
         error:
           "We couldn't record that the area is sensitive, so nothing was uploaded. Try again.",
+        code: "area_flag_failed" as const,
       };
     }
   }
@@ -104,9 +112,14 @@ export async function createScanForUpload(
         ok: false,
         error:
           "SandBag doesn't know that OpenBeta area or climb yet. Leave it blank for now and attach it later.",
+        code: "unknown_area" as const,
       };
     }
-    return { ok: false, error: "We couldn't create the scan. Try again." };
+    return {
+      ok: false,
+      error: "We couldn't create the scan. Try again.",
+      code: "scan_create_failed",
+    };
   }
   const scanId = (data as { id: string }).id;
   return {
@@ -123,20 +136,29 @@ export async function loadOwnUploadedScan(
   userId: string,
   scanId: string,
 ): Promise<Result<object>> {
-  if (!isUuid(scanId)) return { ok: false, error: "Unknown scan." };
+  if (!isUuid(scanId))
+    return { ok: false, error: "Unknown scan.", code: "scan_not_found" };
   const { data, error } = await client
     .from("scans")
     .select("id, uploader_id, status")
     .eq("id", scanId)
     .maybeSingle();
   if (error)
-    return { ok: false, error: "We couldn't check the scan. Try again." };
+    return {
+      ok: false,
+      error: "We couldn't check the scan. Try again.",
+      code: "scan_check_failed",
+    };
   // RLS hides other people's unpublished scans; check anyway.
   const scan = data as { uploader_id: string | null; status: string } | null;
   if (!scan || scan.uploader_id !== userId)
-    return { ok: false, error: "Unknown scan." };
+    return { ok: false, error: "Unknown scan.", code: "scan_not_found" };
   if (scan.status !== "uploaded") {
-    return { ok: false, error: "This scan is already past the upload step." };
+    return {
+      ok: false,
+      error: "This scan is already past the upload step.",
+      code: "past_upload",
+    };
   }
   return { ok: true };
 }
@@ -165,16 +187,36 @@ export async function verifyUploadComplete(
   try {
     listed = await storageFor(client).list(UPLOADS_BUCKET, folder);
   } catch {
-    return { ok: false, error: "We couldn't check the upload. Try again." };
+    return {
+      ok: false,
+      error: "We couldn't check the upload. Try again.",
+      code: "storage_check_failed",
+    };
   }
   const files = listed.filter((f) => parseRawObjectKey(`${folder}/${f.name}`));
   const [raw] = files;
   if (!raw || files.length !== 1)
-    return { ok: false, error: "The upload hasn't finished yet." };
+    return {
+      ok: false,
+      error: "The upload hasn't finished yet.",
+      code: "upload_unfinished",
+    };
   const size = raw.size ?? 0;
   if (size > MAX_UPLOAD_BYTES)
-    return { ok: false, error: "That file is over 200 MB." };
+    return {
+      ok: false,
+      error: "That file is over 200 MB.",
+      code: "file_too_large",
+    };
 
-  await deps.enqueue({ scanId, rawPath: `${folder}/${raw.name}` });
+  try {
+    await deps.enqueue({ scanId, rawPath: `${folder}/${raw.name}` });
+  } catch {
+    return {
+      ok: false,
+      error: "We couldn't queue your scan for checking. Try again.",
+      code: "enqueue_failed",
+    };
+  }
   return { ok: true };
 }

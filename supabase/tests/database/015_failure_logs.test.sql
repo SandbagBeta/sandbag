@@ -1,7 +1,7 @@
 -- Private failure log and report_failure (2026-11-12).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(15);
+select plan(17);
 
 insert into auth.users (id, email) values
   ('00000000-0000-0000-0000-0000000000e1', 'e1@example.invalid'),
@@ -29,6 +29,10 @@ select throws_ok($$insert into public.failure_logs (reference, stage, code, cont
   '23514', null, 'context must be a json object');
 select throws_ok($$insert into public.failure_logs (reference, stage, code) values ('SB-0123ABCD', 'database', 'error')$$,
   '23505', null, 'a reference is unique');
+
+select lives_ok($$insert into public.failure_logs (reference, stage, code) values ('SB-0123ABCH', 'upload', 'scan_create_failed')$$, 'the upload stage is accepted');
+select lives_ok($$insert into public.failure_logs (reference, stage, code) values ('SB-0123ABCJ', 'qc', 'pipeline_error')$$, 'the qc stage is accepted');
+delete from public.failure_logs where reference in ('SB-0123ABCH', 'SB-0123ABCJ');
 
 -- Access: only maintainers read; nobody but the service role writes.
 set local role authenticated;

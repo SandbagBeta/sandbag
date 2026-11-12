@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { QcReport, Review, Scan, ScanStatusEvent } from "../types";
+import type { FailureHelp } from "../annotations/failureHelp";
+import { qcHelpForScan } from "../upload/failures";
 import { isUuid } from "../upload/keys";
 
 /** Everything the scan page shows. Read with the caller's client: RLS decides. */
@@ -9,12 +11,16 @@ export interface ScanReport {
   reviews: Review[];
   /** A retry that replaces this scan, if one exists. */
   retriedBy: { id: string; status: string } | null;
+  /** Why the automated checks failed, in the shared failure-help shape. Null unless the scan failed them. */
+  help: FailureHelp | null;
 }
 
 export async function loadScanReport(
   client: SupabaseClient,
   scanId: string,
   userId: string,
+  /** Service-role client: only used to look up the reference of a failure logged on our side. */
+  serviceDb: SupabaseClient | null = null,
 ): Promise<ScanReport | null> {
   if (!isUuid(scanId)) return null;
   const { data: scan } = await client
@@ -58,5 +64,9 @@ export async function loadScanReport(
     events: (events.data ?? []) as ScanStatusEvent[],
     reviews: (reviews.data ?? []) as Review[],
     retriedBy: ((retry.data ?? [])[0] as ScanReport["retriedBy"]) ?? null,
+    help:
+      row.status === "failed_qc"
+        ? await qcHelpForScan(serviceDb, scanId, row.qc_report)
+        : null,
   };
 }
