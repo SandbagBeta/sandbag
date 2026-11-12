@@ -9,14 +9,7 @@ import {
   useState,
 } from "react";
 import { useThree } from "@react-three/fiber";
-import {
-  DoubleSide,
-  Raycaster,
-  Vector2,
-  Vector3,
-  type Camera,
-  type Mesh,
-} from "three";
+import { Raycaster, Vector2, Vector3, type Camera } from "three";
 import { useStore } from "zustand";
 import type { MeshSurface } from "@/lib/annotations";
 import type { HoldType, Vec3 } from "@/lib/types";
@@ -236,19 +229,6 @@ function AnnotateScene({
     };
   });
   useEffect(() => onMesh(buildMeshSurface(scan)), [scan, onMesh]);
-  // Scans are one-sided: from behind, back faces are culled and the wall looks
-  // missing. DoubleSide is a material flag only; geometry (and so the indirect
-  // BVH's face numbering) is untouched.
-  useEffect(() => {
-    scan.traverse((o) => {
-      const mats = (o as Mesh).material;
-      for (const m of Array.isArray(mats) ? mats : mats ? [mats] : []) {
-        m.side = DoubleSide;
-        m.needsUpdate = true;
-      }
-    });
-    invalidate();
-  }, [scan, invalidate]);
   const markerScale = useMarkerScale();
   const line = useMemo(
     () => sequenceLine(holds, store.getState().climbId),

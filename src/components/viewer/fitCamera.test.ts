@@ -1,6 +1,9 @@
 import { Box3, BoxGeometry, Group, Mesh, Vector3 } from "three";
+import type { Vec3 } from "@/lib/types";
 import {
   computeCameraFit,
+  dominantNormal,
+  isBehind,
   measureBounds,
   NO_GEOMETRY_MESSAGE,
 } from "./fitCamera";
@@ -80,5 +83,51 @@ describe("measureBounds", () => {
 
   it("throws 'scan has no geometry' for an object with no meshes", () => {
     expect(() => measureBounds(new Group())).toThrow(NO_GEOMETRY_MESSAGE);
+  });
+});
+
+describe("facing", () => {
+  it("averages normals and rejects empty or cancelling input", () => {
+    expect(dominantNormal([])).toBeNull();
+    expect(
+      dominantNormal([
+        [1, 0, 0],
+        [-1, 0, 0],
+      ]),
+    ).toBeNull();
+    expect(
+      dominantNormal([
+        [0, 0, -1],
+        [0, 0, -1],
+      ]),
+    ).toEqual([0, 0, -1]);
+  });
+
+  it("places the camera on the side the surface faces", () => {
+    for (const facing of [
+      [0, 0, -1],
+      [1, 0, 0],
+      [-1, 0, 0],
+    ] as Vec3[]) {
+      const fit = computeCameraFit(boulder, { facing });
+      const out = fit.position.clone().sub(fit.target).normalize();
+      expect(out.x * facing[0] + out.z * facing[2]).toBeGreaterThan(0.85);
+      expect(out.y).toBeGreaterThan(0);
+    }
+  });
+
+  it("falls back to the default view without a usable facing", () => {
+    const def = computeCameraFit(boulder).position;
+    expect(computeCameraFit(boulder, { facing: null }).position).toEqual(def);
+    expect(computeCameraFit(boulder, { facing: [0, 1, 0] }).position).toEqual(
+      def,
+    );
+  });
+
+  it("only re-aims a camera that is behind the surface", () => {
+    expect(isBehind(new Vector3(0, 1, -5), [0, 0, 1])).toBe(true);
+    expect(isBehind(new Vector3(0, 1, 5), [0, 0, 1])).toBe(false);
+    expect(isBehind(new Vector3(5, 1, 0.5), [0, 0, 1])).toBe(false);
+    expect(isBehind(new Vector3(0, 1, -5), null)).toBe(false);
   });
 });

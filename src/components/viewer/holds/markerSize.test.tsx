@@ -20,6 +20,20 @@ describe("useMarkerSize", () => {
     useMarkerSize.getState().hydrate();
     expect(useMarkerSize.getState().percent).toBe(100);
   });
+  it.each(["", "  ", "0", "0.5", "1", "-20", "9999", "NaN", "null"])(
+    "falls back to 100% for invalid stored value %j",
+    (raw) => {
+      window.localStorage.setItem(MARKER_SIZE_KEY, raw);
+      useMarkerSize.setState({ percent: 50 });
+      useMarkerSize.getState().hydrate();
+      expect(useMarkerSize.getState().percent).toBe(100);
+    },
+  );
+  it("defaults to 100% when nothing is stored", () => {
+    useMarkerSize.setState({ percent: 50 });
+    useMarkerSize.getState().hydrate();
+    expect(useMarkerSize.getState().percent).toBe(100);
+  });
   it("still works when storage throws", () => {
     vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
       throw new Error("blocked");
