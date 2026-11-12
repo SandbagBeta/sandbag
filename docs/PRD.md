@@ -133,7 +133,7 @@ landing → map/area list (OpenBeta data; flagged areas fuzzed/hidden) → bould
 
 | Decision | Choice | Why |
 |---|---|---|
-| Canonical mesh format | GLB (binary glTF 2.0) + Draco/meshopt compression | Web-native, streams into three.js, single file, compresses 5–10x |
+| Canonical mesh format | GLB (binary glTF 2.0) + meshopt compression ([ADR 003](decisions/003-qc-pipeline-runtime.md) O7) | Web-native, streams into three.js, single file, compresses 5–10x |
 | Accepted uploads | .glb/.gltf, .obj(+.mtl/textures zipped), .ply | Covers Polycam, Scaniverse, RealityScan, Luma export menus |
 | Mesh processing | Node route in the Next.js app, driven by a Postgres job queue ([ADR 003](decisions/003-qc-pipeline-runtime.md): Edge Function limits are too small), using `gltf-transform`; `assimp`/`obj2gltf` for conversion | Pure-JS pipeline where possible; keeps self-hosting easy |
 | Hold anchoring | Position (xyz, in the GLB's own frame) + global face index (concatenated triangle primitives, `flattenDocument` order) + normal on the *canonical* GLB; annotations versioned against a scan content-hash | Survives recompression; invalidates cleanly if mesh is replaced. Enforced in SQL (#26): holds must match the scan's current hash, and replacing a scan's mesh sets `climbs.annotations_stale_at` on its climbs until the holds are re-placed. |
@@ -182,7 +182,7 @@ Row-level security: contributors edit their own pending items (holds and paths o
 2. Parse: mesh loads, ≥ 1 mesh primitive, triangle count in [10k, 5M].
 3. Geometry: bounding box sane (0.3m–30m — it's a boulder, not a pebble or a mountain), not degenerate (volume > 0), < 50% disconnected floater vertices.
 4. Texture: present, ≥ 1024px on longest side (warn, don't fail, below 2048).
-5. Output: convert → GLB, Draco-compress, generate thumbnail (headless render), write `qc_report`.
+5. Output: convert → GLB, meshopt-compress, generate thumbnail (pure-JS render, WebP via sharp), write `qc_report`.
 
 **Community (human):**
 - Queue of `pending_review` scans/climbs with viewer embed + QC report.

@@ -5,13 +5,21 @@ import {
   type ScanQcPatch,
 } from "../lifecycle";
 import type { LifecycleStatus, QcReport } from "../types";
-import { UPLOADS_BUCKET } from "../upload/keys";
+import { storageFor } from "../storage";
+import {
+  derivedGlbKey,
+  derivedThumbKey,
+  parseRawObjectKey,
+  UPLOADS_BUCKET,
+} from "../upload/keys";
 import type { UploadKind } from "../upload/validate";
+import { buildCanonicalGlb } from "./canonical";
 import { checkFileSize } from "./checks";
 import { formatMetrics } from "./metrics";
 import { buildQcReport } from "./report";
 import { runQcChecks } from "./run";
 import { MAX_RAW_BYTES, QC_PIPELINE_VERSION } from "./thresholds";
+import { renderThumbnailWebp } from "./thumbnail";
 
 /**
  * QC worker (#16 PR 2, ADR 003 §5): claims one job, runs the checks, writes
@@ -194,6 +202,8 @@ export async function processNextQcJob(
     let passed = false;
     let triCount: number | null = null;
     let textureRes: number | null = null;
+    let glbPath: string | null = null;
+    let contentHash: string | null = null;
     if (size > maxBytes) {
       report = buildQcReport([checkFileSize(size, maxBytes)], null);
     } else {
@@ -201,11 +211,37 @@ export async function processNextQcJob(
       const r = await runQcChecks({ bytes, kind, maxBytes });
       ({ report, passed, triCount, textureRes } = r);
       log(`qc scan=${scanId} ${formatMetrics(r.metrics)}`);
-      // TODO(#16 PR 3): build the canonical GLB from r.mesh / r.document
-      // (recentre, strip metadata, single mesh, compress, hash), upload it to
-      // uploads/{uploader}/{scan}/derived/{hash}.glb and add glb_path and
-      // content_hash to the patch below. Until then a pending_review scan has
-      // NO published mesh and can't be published (scans_published_has_mesh).
+      if (passed && r.mesh) {
+        // Canonical GLB (ADR 003 steps 4-5). Never to `published` at QC time
+        // (ADR 002 §3); keys are deterministic, so a re-run overwrites
+        // identical bytes. Any throw here is an infrastructure error (retry).
+        const ids = parseRawObjectKey(job.raw_path);
+        if (!ids) throw new Error("unexpected raw path");
+        const glb = await buildCanonicalGlb(r.mesh, r.document);
+        const store = storageFor(db);
+        glbPath = derivedGlbKey(ids.uploaderId, ids.scanId, glb.contentHash);
+        await store.put({ bucket: "uploads", key: glbPath }, glb.bytes, {
+          contentType: "model/gltf-binary",
+          upsert: true,
+        });
+        contentHash = glb.contentHash;
+        report = { ...report, recentred: glb.recentred };
+        log(`qc scan=${scanId} canonical bytes=${glb.bytes.length}`);
+        // The thumbnail is a nicety: a failure must not fail the scan.
+        try {
+          const webp = await renderThumbnailWebp(glb.positions, glb.indices);
+          await store.put(
+            {
+              bucket: "uploads",
+              key: derivedThumbKey(ids.uploaderId, ids.scanId),
+            },
+            webp,
+            { contentType: "image/webp", upsert: true },
+          );
+        } catch {
+          log(`qc scan=${scanId} thumbnail failed`);
+        }
+      }
     }
 
     await finishScan(
@@ -217,6 +253,9 @@ export async function processNextQcJob(
       {
         tri_count: triCount,
         texture_res: passed ? textureRes : null,
+        ...(glbPath && contentHash
+          ? { glb_path: glbPath, content_hash: contentHash }
+          : {}),
         qc_report: report,
       },
     );

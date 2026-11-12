@@ -1,6 +1,6 @@
 # Capture guide: how to scan a boulder well
 
-A good scan passes SandBag's automated checks the first time and makes holds easy to place. This page covers how to shoot, what to export, and how to fix the checks people hit most. The numbers come from `src/lib/qc/thresholds.ts` (QC pipeline `qc-1.0.0`); if they change, this page should change with them.
+A good scan passes SandBag's automated checks the first time and makes holds easy to place. This page covers how to shoot, what to export, and how to fix the checks people hit most. The numbers come from `src/lib/qc/thresholds.ts` (QC pipeline `qc-1.1.0`); if they change, this page should change with them.
 
 **Respect access and privacy.** Only scan boulders you are allowed to be at. Don't scan on closed or access-restricted land, and don't publish a location a landowner or local group asks you to keep private. SandBag never asks for GPS coordinates; leave location tagging off in your capture app and strip it from anything you share elsewhere. Location is attached by linking the scan to an OpenBeta area, and the app decides what is shown.
 
