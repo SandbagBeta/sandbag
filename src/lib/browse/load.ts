@@ -49,7 +49,7 @@ export class BrowseLoadError extends Error {
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-type ScanRow = Pick<
+export type ScanRow = Pick<
   Scan,
   "id" | "openbeta_area_id" | "glb_path" | "content_hash"
 >;
@@ -86,7 +86,7 @@ async function publishedScans(db: SupabaseClient): Promise<ScanRow[]> {
   return (res.data ?? []) as ScanRow[];
 }
 
-async function cards(
+export async function cards(
   db: SupabaseClient,
   scans: ScanRow[],
 ): Promise<BoulderCard[]> {
