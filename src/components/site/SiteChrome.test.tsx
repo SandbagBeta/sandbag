@@ -10,12 +10,27 @@ describe("SiteHeader", () => {
       "/",
     );
     const nav = screen.getByRole("navigation", { name: "Main" });
+    // Each link appears twice: inline on wide screens, and in the phone menu.
     for (const { href, label } of NAV_LINKS) {
-      expect(within(nav).getByRole("link", { name: label })).toHaveAttribute(
-        "href",
-        href,
-      );
+      const links = within(nav).getAllByRole("link", { name: label });
+      expect(links).toHaveLength(2);
+      for (const l of links) expect(l).toHaveAttribute("href", href);
     }
+  });
+
+  it("has Home and FAQ in the nav", () => {
+    expect(NAV_LINKS.map((l) => l.label)).toEqual(
+      expect.arrayContaining(["Home", "FAQ"]),
+    );
+    expect(NAV_LINKS[0]).toEqual({ href: "/", label: "Home" });
+  });
+
+  it("offers the phone menu as a native disclosure (no JavaScript needed)", () => {
+    const { container } = render(<SiteHeader />);
+    const menu = container.querySelector("details");
+    expect(menu).not.toBeNull();
+    expect(menu!.querySelector("summary")!.textContent).toContain("Menu");
+    expect(menu!.className).toContain("sm:hidden");
   });
 
   it("keeps the static account link (proxy redirects signed-out users)", () => {

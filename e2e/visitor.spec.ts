@@ -117,3 +117,40 @@ test("@smoke unknown routes show a friendly not-found with a way back", async ({
   ).toBeVisible();
   await expect(page.getByRole("link", { name: "Browse areas" })).toBeVisible();
 });
+
+test("@smoke the FAQ answers questions in four sections", async ({ page }) => {
+  await page.goto("/faq");
+  await expect(
+    page.getByRole("heading", { level: 1, name: /frequently asked/i }),
+  ).toBeVisible();
+  for (const name of [
+    "Scanning and uploading",
+    "Review and publishing",
+    "Access and privacy",
+    "Licensing and data",
+  ]) {
+    await expect(page.getByRole("heading", { name })).toBeVisible();
+  }
+  // A native disclosure opens on click and shows its answer.
+  const q = page.getByText("How big can a file be?");
+  await q.click();
+  await expect(page.getByText(/caps every file at 50 MB/)).toBeVisible();
+});
+
+test("@smoke Home and FAQ are reachable from the header on every screen size", async ({
+  page,
+  isMobile,
+}) => {
+  await page.goto("/faq");
+  // On phones the links live behind the Menu disclosure.
+  if (isMobile) await page.getByText("Menu", { exact: true }).click();
+  const nav = page.getByRole("navigation", { name: "Main" });
+  await nav
+    .getByRole("link", { name: "Home" })
+    .filter({ visible: true })
+    .click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "SandBag" }),
+  ).toBeVisible();
+});
