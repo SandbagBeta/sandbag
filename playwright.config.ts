@@ -44,6 +44,9 @@ export default defineConfig({
     ? undefined
     : {
         command: "pnpm dev",
+        // Next 16 serves no client JS to hosts missing from allowedDevOrigins;
+        // the test URL is 127.0.0.1, so the 3D viewer would never hydrate.
+        env: { DEV_ALLOWED_ORIGINS: new URL(baseURL).hostname },
         url: baseURL,
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,
