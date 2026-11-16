@@ -35,7 +35,7 @@ Sign-in is GitHub/Google OAuth only, which a test can't drive. `e2e/support/auth
 ## In CI
 
 - `e2e` job in `.github/workflows/ci.yml`: starts a local Supabase stack, seeds, builds, serves the production bundle (`E2E_SERVER=start`) and runs the full suite. Failure uploads the Playwright report and traces. It is not a required check yet (#150).
-- `.github/workflows/smoke.yml`: on a successful deployment, runs `@smoke` against the deployment URL. If previews use Vercel Deployment Protection, add the repository secret `VERCEL_AUTOMATION_BYPASS_SECRET` (Vercel: Project Settings > Deployment Protection > Protection Bypass for Automation).
+- `.github/workflows/smoke.yml`: runs `@smoke` against the site named by the repository **variable** `SMOKE_BASE_URL` (Settings > Secrets and variables > Actions > Variables). Triggers: after CI passes on `main`, on demand from the Actions tab (with an optional `url` input), and daily as a watchdog. Unset and no input: it skips. It does not use GitHub deployment events, because Vercel does not create GitHub deployments for this repo (the Deployments section is absent). If the site uses Vercel Deployment Protection, add the repository secret `VERCEL_AUTOMATION_BYPASS_SECRET` (Vercel: Project Settings > Deployment Protection > Protection Bypass for Automation). Limitation: after a merge it waits for the site to answer, but it cannot tell whether the answering deployment is the new commit; for that the health endpoint would need to report its commit SHA.
 
 ## Troubleshooting
 
