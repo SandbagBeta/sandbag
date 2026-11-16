@@ -6,6 +6,9 @@ Paste everything below the line into a Claude session that can drive a browser o
 
 You are helping the owner of the open-source project SandBag turn on **GitHub and Google sign-in** for its hosted deployment. The app and its code are already deployed and healthy; sign-in fails with `{"error_code":"validation_failed","msg":"Unsupported provider: provider is not enabled"}` because neither provider is enabled in the hosted Supabase project, and the OAuth apps don't exist yet.
 
+## Check first
+Providers may already be enabled in Supabase even if an earlier error said otherwise: open each provider panel before creating anything, and only create what is missing. Known pitfalls from the first run: Google's consent screen must be **External** (Internal gives `403 org_internal`), the Google client's redirect URI must be the Supabase callback (else `redirect_uri_mismatch`), and the Supabase **Site URL** must be the bare origin, not the `/auth/callback**` pattern.
+
 ## Values
 - Site URL (Vercel deployment): `<SITE_URL>` (for example `https://something.vercel.app`, no trailing slash)
 - Supabase project ref: `<PROJECT_REF>` (the part before `.supabase.co` in the project URL)

@@ -109,11 +109,11 @@ The milestone-by-milestone status lives in [PRD §13](docs/PRD.md); this section
 - **CI (#150):** `e2e` job in `ci.yml` and `smoke.yml` (post-deploy). Written, not yet run on GitHub.
 - **Seed fix:** demo foot holds no longer carry `seq_order` (`pnpm seed` failed on `holds_foot_unordered`).
 - **Redesign (#151, #152):** earthy tokens, Fraunces + Hanken Grotesk, shared header and footer, SVG icons, live 3D hero (lazy, no database, poster fallback).
-- **Hosting:** the app is deployed on Vercel at a provisional URL; `/api/health` reports Supabase configured.
+- **Hosting:** the app is deployed on Vercel at a provisional URL; `/api/health` reports Supabase configured; GitHub and Google sign-in verified.
 - All of the above is on PR [#155](https://github.com/SandbagBeta/sandbag/pull/155), awaiting its first CI run and review.
 
 ### Next, in order
-1. **Turn on sign-in (owner):** enable GitHub and Google in the hosted Supabase project and set the Site URL and redirect URLs. Prompt: [docs/prompts/oauth-setup.md](docs/prompts/oauth-setup.md); steps: [docs/hosted-setup.md](docs/hosted-setup.md).
+1. **Sign-in: done.** GitHub and Google both work on hosted. Open: add more Google test users, and decide separately whether to publish the Google consent screen (see [docs/hosted-setup.md](docs/hosted-setup.md) "Sign-in").
 2. **Finish the hosted setup checklist (owner):** `image/webp` on the `uploads` bucket, Vault secrets `qc_run_secret` and `qc_run_url`, `pg_cron`/`pg_net`, repository variables for the dataset export. Then run the §6 smoke test and record the result in PRD §13.
 3. **Land PR #155:** fix whatever the first `e2e` and `smoke` runs find; then make `e2e` a required check once it is stable. Check by hand that the viewer and annotate pages sit correctly under the new header (`h-view`).
 4. **Contributor readiness (#154):** 8 to 10 `good-first-issue`s, a Node 24 note in README and CONTRIBUTING, close #123 and #127 after verifying their checkboxes.

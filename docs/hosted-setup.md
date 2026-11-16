@@ -39,6 +39,16 @@ From `.env.example`; none of the secrets may get a `NEXT_PUBLIC_` prefix.
 - [ ] Auth providers and redirect URLs configured in the Supabase dashboard (`.env.example`, OAuth section).
 - [ ] The function timeout allows the QC route (`maxDuration` 300 in `src/app/api/qc/run/route.ts`; check the Vercel plan allows it) and enough memory: about 1.1 GB at 5M triangles (comment in the same file).
 
+## Sign-in (GitHub and Google)
+
+Verified working on the hosted site on 2026-11-16. What it took, so it is not rediscovered:
+
+- Supabase **Site URL** is the bare origin (`https://<site>`). Putting the redirect pattern (`.../auth/callback**`) in that field is invalid. The pattern belongs in **Redirect URLs**.
+- The OAuth apps' callback is the **Supabase** one, `https://<project-ref>.supabase.co/auth/v1/callback`. Google failed with `redirect_uri_mismatch` until it was added to the client's Authorized redirect URIs.
+- Google's consent screen must be **External**. **Internal** returns `403 org_internal` for any account outside the Google Workspace org.
+- In Testing mode only listed **test users** can sign in with Google. Add testers under Audience, or publish the screen (a separate decision; it makes sign-in public).
+- An OAuth app's JavaScript origin is not needed for this flow.
+
 ## 5. Weekly dataset export (GitHub)
 
 - [ ] Repository **variables** (not secrets) `SUPABASE_URL` and `SUPABASE_ANON_KEY` ([`dataset-export.yml`](../.github/workflows/dataset-export.yml)). Without them the workflow reports "skipped". The anon key only: never the service role key.
