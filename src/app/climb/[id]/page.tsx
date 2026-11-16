@@ -59,30 +59,23 @@ export default async function ClimbPage({ params }: { params: Params }) {
   ]);
 
   return (
-    <main className="mx-auto max-w-2xl space-y-6 px-6 py-12">
+    <main className="page max-w-2xl">
       <header className="space-y-2">
-        <nav
-          aria-label="Breadcrumb"
-          className="text-xs text-stone-600 dark:text-stone-400"
-        >
+        <nav aria-label="Breadcrumb">
           <Link
             href={`/boulder/${climb.scan_id}?climb=${climb.id}`}
-            className="underline hover:no-underline"
+            className="crumb text-sm"
           >
             View on the 3D boulder
           </Link>
         </nav>
-        <h1 className="text-3xl font-bold tracking-tight">
+        <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
           {climb.name}{" "}
-          <span className="font-normal text-stone-600 dark:text-stone-400">
-            {climb.proposed_grade}
-          </span>
+          <span className="text-muted font-normal">{climb.proposed_grade}</span>
         </h1>
         <p className="text-sm">{climb.description}</p>
         {climb.fa_info && (
-          <p className="text-xs text-stone-600 dark:text-stone-400">
-            FA: {climb.fa_info}
-          </p>
+          <p className="text-muted text-xs">FA: {climb.fa_info}</p>
         )}
       </header>
       <VotePanel
@@ -93,10 +86,10 @@ export default async function ClimbPage({ params }: { params: Params }) {
         canVote={!!user}
       />
       {!user && (
-        <p className="text-sm text-stone-600 dark:text-stone-400">
+        <p className="text-muted text-sm">
           <Link
             href={`/sign-in?next=${encodeURIComponent(`/climb/${climb.id}`)}`}
-            className="underline hover:no-underline"
+            className="text-moss inline-flex min-h-11 items-center font-semibold underline underline-offset-4 hover:no-underline"
           >
             Sign in
           </Link>{" "}

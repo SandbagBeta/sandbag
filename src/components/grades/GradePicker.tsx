@@ -28,7 +28,7 @@ export function GradePicker({
               onChange={() => onChange(g)}
               className="peer sr-only"
             />
-            <span className="inline-block min-w-11 rounded border border-zinc-300 px-2 py-1.5 text-center text-sm peer-checked:border-zinc-900 peer-checked:bg-zinc-900 peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500 peer-disabled:opacity-50 dark:border-zinc-600 dark:peer-checked:border-zinc-100 dark:peer-checked:bg-zinc-100 dark:peer-checked:text-zinc-900">
+            <span className="border-line bg-surface peer-checked:border-moss peer-checked:bg-moss peer-checked:text-on-moss inline-flex min-h-11 min-w-11 items-center justify-center rounded-md border px-2 text-sm peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--focus)] peer-disabled:opacity-50">
               {g}
             </span>
           </label>

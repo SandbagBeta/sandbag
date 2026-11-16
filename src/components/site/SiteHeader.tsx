@@ -12,7 +12,7 @@ export function Wordmark() {
   return (
     <Link
       href="/"
-      className="font-display flex items-center gap-1.5 text-lg font-semibold tracking-tight sm:text-xl"
+      className="font-display flex min-h-11 items-center gap-1.5 text-lg font-semibold tracking-tight sm:text-xl"
     >
       <svg
         viewBox="0 0 24 24"
@@ -41,7 +41,10 @@ export function SiteHeader() {
           <ul className="flex items-center gap-2.5 text-[13px] font-medium sm:gap-6 sm:text-sm">
             {NAV_LINKS.map(({ href, label }) => (
               <li key={href}>
-                <a href={href} className="hover:text-moss py-2 hover:underline">
+                <a
+                  href={href}
+                  className="hover:text-moss inline-flex min-h-11 items-center hover:underline"
+                >
                   {label}
                 </a>
               </li>
@@ -49,7 +52,7 @@ export function SiteHeader() {
           </ul>
           <a
             href="/account"
-            className="border-line hover:bg-surface rounded-md border px-2 py-1.5 text-[13px] font-medium sm:px-3 sm:text-sm"
+            className="border-line hover:bg-surface inline-flex min-h-11 items-center rounded-md border px-2 text-[13px] font-medium sm:px-3 sm:text-sm"
           >
             Account
           </a>

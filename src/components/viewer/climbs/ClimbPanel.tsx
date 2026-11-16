@@ -31,7 +31,10 @@ export function ClimbList({
 }: ClimbListProps) {
   return (
     <section aria-labelledby="climb-list-heading">
-      <h2 id="climb-list-heading" className="mb-2 text-sm font-semibold">
+      <h2
+        id="climb-list-heading"
+        className="font-display mb-2 text-base font-semibold"
+      >
         Climbs
       </h2>
       {climbs.length === 0 ? (
@@ -48,10 +51,10 @@ export function ClimbList({
                   type="button"
                   aria-pressed={pressed}
                   onClick={() => onSelect(pressed ? null : c.id)}
-                  className={`flex w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 ${
+                  className={`flex min-h-11 w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm ${
                     pressed
-                      ? "border-stone-900 bg-stone-900 text-white dark:border-stone-100 dark:bg-stone-100 dark:text-stone-900"
-                      : "border-stone-300 hover:bg-stone-100 dark:border-stone-700 dark:hover:bg-stone-800"
+                      ? "border-moss bg-moss text-on-moss"
+                      : "border-line bg-surface hover:border-moss"
                   }`}
                 >
                   <span className="font-medium">{c.name}</span>{" "}
@@ -103,7 +106,7 @@ export function ClimbInfo({ climb, holds, paths = [] }: ClimbInfoProps) {
       <p className="mt-2 text-sm">
         <Link
           href={`/climb/${climb.id}`}
-          className="underline hover:no-underline"
+          className="text-moss inline-flex min-h-11 items-center font-semibold underline underline-offset-4 hover:no-underline"
         >
           Grade votes
         </Link>

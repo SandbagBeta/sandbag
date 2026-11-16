@@ -105,9 +105,9 @@ export default async function BoulderPage({
           <header className="space-y-2">
             <nav
               aria-label="Breadcrumb"
-              className="flex gap-1 text-xs text-stone-600 dark:text-stone-400"
+              className="text-muted flex flex-wrap items-center gap-x-1 text-sm"
             >
-              <Link href="/areas" className="underline hover:no-underline">
+              <Link href="/areas" className="crumb">
                 Areas
               </Link>
               {boulder.area && data.scan.openbeta_area_id && (
@@ -115,18 +115,18 @@ export default async function BoulderPage({
                   <span aria-hidden>›</span>
                   <Link
                     href={`/area/${data.scan.openbeta_area_id}`}
-                    className="underline hover:no-underline"
+                    className="crumb"
                   >
                     {boulder.area}
                   </Link>
                 </>
               )}
             </nav>
-            <h1 className="text-xl font-bold tracking-tight">{title}</h1>
-            <p className="text-sm text-stone-600 dark:text-stone-400">
-              {description}
-            </p>
-            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs text-stone-600 dark:text-stone-400">
+            <h1 className="font-display text-2xl font-semibold tracking-tight">
+              {title}
+            </h1>
+            <p className="text-muted text-sm">{description}</p>
+            <dl className="text-muted grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
               {data.scan.capture_app && (
                 <>
                   <dt>Captured with</dt>
@@ -145,7 +145,7 @@ export default async function BoulderPage({
               <dd>
                 <a
                   href="https://creativecommons.org/licenses/by-sa/4.0/"
-                  className="underline hover:no-underline"
+                  className="underline underline-offset-2 hover:no-underline"
                 >
                   CC BY-SA 4.0
                 </a>
@@ -156,7 +156,7 @@ export default async function BoulderPage({
               <ExportLink scanId={data.scan.id} />
               <Link
                 href={`/boulder/${data.scan.id}/annotate`}
-                className="inline-block rounded-md border border-stone-300 px-3 py-1.5 text-sm hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 dark:border-stone-700 dark:hover:bg-stone-800"
+                className="btn btn-ghost px-3 py-1.5"
               >
                 Add a climb
               </Link>
@@ -164,7 +164,7 @@ export default async function BoulderPage({
             {updated && (
               <p
                 role="status"
-                className="rounded border border-emerald-700 p-2 text-sm text-emerald-800 dark:text-emerald-300"
+                className="border-moss text-moss rounded-md border p-2 text-sm"
               >
                 Your changes were saved. The climb is still waiting for review.
               </p>
@@ -172,7 +172,7 @@ export default async function BoulderPage({
             {submitted && (
               <p
                 role="status"
-                className="rounded border border-emerald-700 p-2 text-sm text-emerald-800 dark:text-emerald-300"
+                className="border-moss text-moss rounded-md border p-2 text-sm"
               >
                 Thanks. Your climb was submitted and will appear after review.
               </p>

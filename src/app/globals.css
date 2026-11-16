@@ -139,9 +139,50 @@ body {
   .btn-ghost {
     @apply border-line text-ink hover:bg-surface border;
   }
+  /* Phone-friendly: every interactive control is at least 44px tall. */
+  .btn {
+    @apply min-h-11;
+  }
+  .page {
+    @apply mx-auto max-w-3xl space-y-8 px-4 py-10 sm:px-6 sm:py-14;
+  }
+  .crumb {
+    @apply text-muted hover:text-ink inline-flex min-h-11 items-center underline underline-offset-4 hover:no-underline;
+  }
+  .field {
+    @apply border-line bg-surface text-ink min-h-11 rounded-md border px-3 text-base sm:text-sm;
+  }
+}
+
+/* Loading skeleton: a CSS-only shimmer. Reduced motion gets a static block
+   (the global rule below also zeroes the animation). */
+.skeleton {
+  background-color: var(--line);
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--surface) 70%, transparent),
+    transparent
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+    background-image: none;
+  }
+
   *,
   *::before,
   *::after {

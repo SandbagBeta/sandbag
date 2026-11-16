@@ -22,20 +22,22 @@ export function climbSummary(b: Pick<BoulderCard, "climbNames" | "grades">) {
 export function BoulderCards({ boulders, supabaseUrl }: BoulderCardsProps) {
   const publicUrl = (key: string) => publishedUrl(supabaseUrl, key);
   return (
-    <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+    <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
       {boulders.map((b) => (
-        <li key={b.id}>
+        <li key={b.id} className="min-w-0">
           <Link
             href={`/boulder/${b.id}`}
-            className="block rounded-lg border border-stone-200 p-2 hover:border-stone-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 dark:border-stone-800 dark:hover:border-stone-600"
+            className="group border-line bg-surface hover:border-moss block overflow-hidden rounded-xl border transition-[border-color,box-shadow] duration-150 hover:shadow-md focus-visible:outline-offset-2"
           >
             <BoulderThumb src={b.thumbPath ? publicUrl(b.thumbPath) : null} />
-            <p className="mt-2 truncate text-sm font-medium">
-              {b.climbNames.length ? b.climbNames.join(", ") : "Boulder scan"}
-            </p>
-            <p className="text-xs text-stone-600 tabular-nums dark:text-stone-400">
-              {climbSummary(b)}
-            </p>
+            <div className="min-h-11 space-y-0.5 p-3">
+              <p className="font-display group-hover:text-moss truncate text-base font-semibold">
+                {b.climbNames.length ? b.climbNames.join(", ") : "Boulder scan"}
+              </p>
+              <p className="text-muted truncate text-xs tabular-nums">
+                {climbSummary(b)}
+              </p>
+            </div>
           </Link>
         </li>
       ))}
