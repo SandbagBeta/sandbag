@@ -105,22 +105,20 @@ Merge discipline: squash-merge, `main` protected (PRs only, CI required), no age
 The milestone-by-milestone status lives in [PRD §13](docs/PRD.md); this section is the working list. Update it at the end of each work session.
 
 ### Worked on this session
-- **E2E (#149):** Playwright suite, one suite for local and hosted targets; tests sign in with an admin-created session cookie (no test hook in the app). Database specs ran green on a local stack. `@smoke` specs ran green against the hosted deployment.
-- **CI (#150):** `e2e` job in `ci.yml` and `smoke.yml` (post-deploy). Written, not yet run on GitHub.
-- **Seed fix:** demo foot holds no longer carry `seq_order` (`pnpm seed` failed on `holds_foot_unordered`).
-- **Redesign (#151, #152):** earthy tokens, Fraunces + Hanken Grotesk, shared header and footer, SVG icons, live 3D hero (lazy, no database, poster fallback).
-- **Hosting:** the app is deployed on Vercel at a provisional URL; `/api/health` reports Supabase configured; GitHub and Google sign-in verified; upload, QC, review, publish and annotate verified end to end (2026-11-16).
-- All of the above merged as PR [#155](https://github.com/SandbagBeta/sandbag/pull/155); its first CI run, including the `e2e` job, was green.
+- **PR [#155](https://github.com/SandbagBeta/sandbag/pull/155):** Playwright e2e suite for local and hosted targets (#149), the `e2e` CI job (#150, green on its first run), the earthy redesign (#151), the live 3D hero (#152), the `pnpm seed` fix, and hosted verification (sign-in, upload, QC, review, publish, annotate, thumbnail).
+- **PR [#165](https://github.com/SandbagBeta/sandbag/pull/165):** browse-page polish, cards and loading, empty and error states (#153); contributor docs and nine `good-first-issue`s (#154, #156 to #164); `smoke.yml` rewritten to run after CI on `main`, on demand and daily against the `SMOKE_BASE_URL` variable, because Vercel creates no GitHub deployments (first run green).
+- **PR [#169](https://github.com/SandbagBeta/sandbag/pull/169):** hero ghost-rock fix and a side-to-side sweep through the climbs, Home and FAQ in the nav (phone menu), a `/faq` page (#166, #167), and the private account dashboard plus public `/u/[handle]` (#168), with a dashboard fix for changes-requested scans.
+- **Hosting:** deployed on Vercel at a provisional URL, Supabase configured, all 17 migrations applied, QC secrets set, GitHub and Google sign-in working.
 
 ### Next, in order
-1. **Sign-in: done.** GitHub and Google both work on hosted. Open: add more Google test users, and decide separately whether to publish the Google consent screen (see [docs/hosted-setup.md](docs/hosted-setup.md) "Sign-in").
-2. **Finish verifying hosted:** the upload to publish to annotate loop is verified. Left: approve the saved climb and vote a grade on it, check the export download, add more Google test users, and remove the test data (two demo-fixture scans published as tests and a pending "Smoke test line" climb) before launch. Then run the weekly export's repository variables.
-3. **Watch the first post-merge deployment:** `smoke.yml` only triggers from `main`, so that run is its first real test. Make `e2e` a required check (#150) once a few more PRs have passed it.
-4. **Contributor readiness (#154):** 8 to 10 `good-first-issue`s, a Node 24 note in README and CONTRIBUTING, close #123 and #127 after verifying their checkboxes.
-5. **Polish 3 (#153):** thumbnail-led cards, skeleton, empty and error states, phone-width pass, OG image (no coordinates for hidden areas).
-6. **More e2e:** upload, QC (call `POST /api/qc/run` with `QC_RUN_SECRET`), review, publish, annotate, grade vote, export.
+1. **Verify the new pages on hosted (owner):** `/account` with real uploads, `/u/<your handle>` (published items only, no email), `/faq` wording. Edit the FAQ answers to taste.
+2. **Finish verifying hosted:** approve the saved climb and vote a grade on it, check the export download, add more Google test users, decide on publishing the Google consent screen (see [docs/hosted-setup.md](docs/hosted-setup.md) "Sign-in"), and remove the test data (two demo-fixture scans published as tests and a pending "Smoke test line" climb) before launch. Then set the weekly export's repository variables.
+3. **Close #154** (checklist done) and make `e2e` a required check (#150) once a few more PRs have passed it.
+4. **Invite contributors:** the nine `good-first-issue`s (#156 to #164) are ready; launch drafts are in [docs/launch](docs/launch/README.md) (#39).
+5. **More e2e:** upload, QC (call `POST /api/qc/run` with `QC_RUN_SECRET`), review, publish, annotate, grade vote, export; and a spec for `/u/[handle]`.
+6. **Smaller follow-ups:** report the commit SHA from `/api/health` so the smoke job can wait for the new deployment; per-profile Open Graph data (deliberately not added yet, privacy review first).
 7. **Owner-only, already tracked:** #7 (Anthropic secret for claude-code-action), #35 (seed scans), #39 (launch posts), #50 R2 (needs a custom domain).
-8. **Later:** #22 climb builder UI remainder, #13 viewer performance spike, #38 v2 capture spike.
+8. **Later:** #22 climb builder UI remainder, #13 viewer performance spike, #37 timed self-host check, #38 v2 capture spike.
 
 ### Working notes
 - This cloud container cannot pull Supabase images (the registry's blob hosts are blocked), so database-backed e2e runs on the owner's machine or in CI, not in agent sessions.
