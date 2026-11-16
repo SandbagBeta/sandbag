@@ -61,7 +61,7 @@ Docs/tests have no dedicated agent: every PR includes its own tests + doc update
 groom issue (clear spec, lane label, milestone, "agent-ready" when self-contained)
 → assign to a runtime (cloud session / local worktree / @claude comment)
 → agent works on branch feat/<issue#>-<slug>, opens PR closing #NN
-→ gate 1: CI — lint (eslint+prettier, incl. `sandbag/no-raw-coordinates`), typecheck (tsc), unit tests (vitest), build; CodeQL security scan
+→ gate 1: CI — lint (eslint+prettier, incl. `sandbag/no-raw-coordinates`), typecheck (tsc), unit tests (vitest), build; CodeQL security scan; Playwright e2e (`e2e` job, not a required check until it has proven stable, see [docs/e2e.md](docs/e2e.md))
 → gate 2: add the `claude-review` label → reviewer agent posts structured review (blocking concerns vs nits)
 → gate 3: Collin — reads reviewer output + diff, resolves concerns, merges
 ```
@@ -99,3 +99,29 @@ Merge discipline: squash-merge, `main` protected (PRs only, CI required), no age
 - Edge Function limits for mesh conversion — may need a small worker (Fly.io/Railway) if >150s or >256MB (#16 spike). Spike done: [ADR 003](docs/decisions/003-qc-pipeline-runtime.md) measured that the full pipeline does not fit an Edge Function. Accepted 2026-11-10: QC runs in a Node route in the Next.js app, with a `qc_jobs` queue and meshopt output.
 - OpenBeta API: rate limits/ToS for caching; reach out to their community early (#27 spike). Spike done: [ADR 001](docs/decisions/001-openbeta-api.md) (CC0 data, no published limits/ToS; questions for the OpenBeta community still open).
 - In-app guided capture (v2): browser photogrammetry feasibility spike (#38).
+
+## 6. Status and next steps (2026-11-16)
+
+The milestone-by-milestone status lives in [PRD §13](docs/PRD.md); this section is the working list. Update it at the end of each work session.
+
+### Worked on this session
+- **E2E (#149):** Playwright suite, one suite for local and hosted targets; tests sign in with an admin-created session cookie (no test hook in the app). Database specs ran green on a local stack. `@smoke` specs ran green against the hosted deployment.
+- **CI (#150):** `e2e` job in `ci.yml` and `smoke.yml` (post-deploy). Written, not yet run on GitHub.
+- **Seed fix:** demo foot holds no longer carry `seq_order` (`pnpm seed` failed on `holds_foot_unordered`).
+- **Redesign (#151, #152):** earthy tokens, Fraunces + Hanken Grotesk, shared header and footer, SVG icons, live 3D hero (lazy, no database, poster fallback).
+- **Hosting:** the app is deployed on Vercel at a provisional URL; `/api/health` reports Supabase configured.
+- All of the above is on PR [#155](https://github.com/SandbagBeta/sandbag/pull/155), awaiting its first CI run and review.
+
+### Next, in order
+1. **Turn on sign-in (owner):** enable GitHub and Google in the hosted Supabase project and set the Site URL and redirect URLs. Prompt: [docs/prompts/oauth-setup.md](docs/prompts/oauth-setup.md); steps: [docs/hosted-setup.md](docs/hosted-setup.md).
+2. **Finish the hosted setup checklist (owner):** `image/webp` on the `uploads` bucket, Vault secrets `qc_run_secret` and `qc_run_url`, `pg_cron`/`pg_net`, repository variables for the dataset export. Then run the §6 smoke test and record the result in PRD §13.
+3. **Land PR #155:** fix whatever the first `e2e` and `smoke` runs find; then make `e2e` a required check once it is stable. Check by hand that the viewer and annotate pages sit correctly under the new header (`h-view`).
+4. **Contributor readiness (#154):** 8 to 10 `good-first-issue`s, a Node 24 note in README and CONTRIBUTING, close #123 and #127 after verifying their checkboxes.
+5. **Polish 3 (#153):** thumbnail-led cards, skeleton, empty and error states, phone-width pass, OG image (no coordinates for hidden areas).
+6. **More e2e:** upload, QC (call `POST /api/qc/run` with `QC_RUN_SECRET`), review, publish, annotate, grade vote, export.
+7. **Owner-only, already tracked:** #7 (Anthropic secret for claude-code-action), #35 (seed scans), #39 (launch posts), #50 R2 (needs a custom domain).
+8. **Later:** #22 climb builder UI remainder, #13 viewer performance spike, #38 v2 capture spike.
+
+### Working notes
+- This cloud container cannot pull Supabase images (the registry's blob hosts are blocked), so database-backed e2e runs on the owner's machine or in CI, not in agent sessions.
+- Next 16 serves no client JS to hosts missing from `allowedDevOrigins`; the e2e config sets `DEV_ALLOWED_ORIGINS` for its test host.
