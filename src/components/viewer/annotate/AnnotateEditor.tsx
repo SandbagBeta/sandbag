@@ -78,7 +78,7 @@ export function AnnotateEditor({
       scanContentHash={scanContentHash}
       scanId={scanId}
       edit={edit}
-      className="h-dvh w-full"
+      className="h-view w-full"
     >
       {children}
     </AnnotateViewer>

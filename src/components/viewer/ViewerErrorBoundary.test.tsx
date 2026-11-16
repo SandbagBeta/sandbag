@@ -64,3 +64,19 @@ describe("describeError", () => {
     expect(describeError(new Error(""))).toBe("Unknown error.");
   });
 });
+
+describe("ViewerErrorBoundary fallback", () => {
+  it("renders the fallback (even null) instead of the error panel", () => {
+    const Boom = () => {
+      throw new Error("404 not found");
+    };
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const { container } = render(
+      <ViewerErrorBoundary fallback={null}>
+        <Boom />
+      </ViewerErrorBoundary>,
+    );
+    expect(container.innerHTML).toBe("");
+    vi.restoreAllMocks();
+  });
+});

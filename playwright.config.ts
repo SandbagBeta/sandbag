@@ -1,0 +1,62 @@
+import { defineConfig, devices } from "@playwright/test";
+
+// One suite, two targets:
+//  - local: `pnpm e2e` starts `pnpm dev` (needs `supabase start` + `pnpm seed`
+//    for the database-backed specs).
+//  - hosted: `BASE_URL=https://<deployment> pnpm e2e:smoke` runs only @smoke
+//    specs, which need no secrets and write nothing.
+const baseURL = process.env.BASE_URL ?? "http://127.0.0.1:3000";
+const hosted = Boolean(process.env.BASE_URL);
+
+export default defineConfig({
+  testDir: "./e2e",
+  fullyParallel: false,
+  workers: 1,
+  retries: process.env.CI ? 1 : 0,
+  reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
+  use: {
+    baseURL,
+    // Vercel Deployment Protection: lets the smoke job through on protected previews.
+    extraHTTPHeaders: process.env.VERCEL_AUTOMATION_BYPASS_SECRET
+      ? {
+          "x-vercel-protection-bypass":
+            process.env.VERCEL_AUTOMATION_BYPASS_SECRET,
+        }
+      : undefined,
+    trace: "retain-on-failure",
+    screenshot: "only-on-failure",
+  },
+  projects: [
+    {
+      name: "chromium",
+      use: {
+        ...devices["Desktop Chrome"],
+        // Software WebGL for GPU-less Linux (CI, containers). Windows and macOS
+        // have a working default, and forcing swiftshader there can break it.
+        launchOptions:
+          process.platform === "linux"
+            ? {
+                args: [
+                  "--use-gl=angle",
+                  "--use-angle=swiftshader",
+                  "--ignore-gpu-blocklist",
+                ],
+              }
+            : {},
+      },
+    },
+    { name: "mobile", use: { ...devices["Pixel 7"] }, grep: /@smoke/ },
+  ],
+  webServer: hosted
+    ? undefined
+    : {
+        // CI builds first and serves the production bundle (E2E_SERVER=start).
+        command: process.env.E2E_SERVER === "start" ? "pnpm start" : "pnpm dev",
+        // Next 16 serves no client JS to hosts missing from allowedDevOrigins;
+        // the test URL is 127.0.0.1, so the 3D viewer would never hydrate.
+        env: { DEV_ALLOWED_ORIGINS: new URL(baseURL).hostname },
+        url: baseURL,
+        reuseExistingServer: !process.env.CI,
+        timeout: 120_000,
+      },
+});

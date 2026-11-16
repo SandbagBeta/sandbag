@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import Home from "./page";
 
 vi.mock("@/lib/supabase/env", () => ({
@@ -21,23 +21,18 @@ describe("Home page", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "SandBag" }),
     ).toBeInTheDocument();
-    expect(screen.getAllByRole("listitem")).toHaveLength(5);
+    const steps = screen.getAllByRole("list")[0];
+    expect(within(steps!).getAllByRole("listitem")).toHaveLength(5);
+    expect(document.body.textContent).not.toMatch(/\p{Extended_Pictographic}/u);
     expect(screen.queryByText("Featured boulders")).toBeNull();
   });
 
-  it("links to sign-in / account", async () => {
-    render(await Home());
+  it("states the open-data values and mounts the hero visual", async () => {
+    const { container } = render(await Home());
     expect(
-      screen.getByRole("link", { name: /sign in \/ account/i }),
-    ).toHaveAttribute("href", "/account");
-  });
-
-  it("links to the OpenBeta project it builds on", async () => {
-    render(await Home());
-    expect(screen.getByRole("link", { name: /openbeta/i })).toHaveAttribute(
-      "href",
-      "https://openbeta.io",
-    );
+      screen.getByRole("heading", { name: "Open by design" }),
+    ).toBeInTheDocument();
+    expect(container.querySelector("[data-slot='hero-visual']")).not.toBeNull();
   });
 
   it("links the contribute CTA to upload", async () => {

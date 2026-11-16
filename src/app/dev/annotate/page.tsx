@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 export default function AnnotateDevPage() {
   if (!isDevHarnessEnabled()) notFound();
   return (
-    <main className="relative h-dvh w-full">
+    <main className="h-view relative w-full">
       <AnnotateClient
         src={demoBoulder.scan.public_url}
         scanContentHash={demoBoulder.scan.content_hash}

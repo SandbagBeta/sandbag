@@ -69,7 +69,7 @@ export function ClimbExplorer({
   );
 
   return (
-    <div className="flex h-dvh flex-col bg-white text-stone-900 md:flex-row dark:bg-stone-950 dark:text-stone-100">
+    <div className="h-view flex flex-col bg-white text-stone-900 md:flex-row dark:bg-stone-950 dark:text-stone-100">
       {/* The viewer is client-only (next/dynamic, ssr: false), so this box
           is what the server renders. It reserves the viewer's space up front;
           sizing the lazy component instead let the panel paint at the top and

@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { Html, Line } from "@react-three/drei";
+import { AdditiveBlending } from "three";
 import type { ClimbPath, Hold } from "@/lib/types";
 import {
   LINE_SURFACE_OFFSET,
@@ -19,9 +20,11 @@ export interface ClimbLineProps {
   path: ClimbPath;
   /** The same climb's holds, used to lift the path off the surface. */
   holds: Hold[];
+  /** Adds a wide, additive halo under the line (landing hero). */
+  glow?: boolean;
 }
 
-export function ClimbLine({ path, holds }: ClimbLineProps) {
+export function ClimbLine({ path, holds, glow = false }: ClimbLineProps) {
   const style = PATH_STYLE[path.kind];
   const isLine = path.kind === "line";
   const scale = useMarkerScale();
@@ -52,6 +55,20 @@ export function ClimbLine({ path, holds }: ClimbLineProps) {
   // reads, and the visible stretches stand out.
   return (
     <group name={`climb-${path.kind}-${path.climb_id}`}>
+      {glow && (
+        <Line
+          points={points}
+          color={style.color}
+          lineWidth={12}
+          transparent
+          opacity={0.22}
+          blending={AdditiveBlending}
+          depthTest={false}
+          depthWrite={false}
+          renderOrder={0}
+          raycast={() => null}
+        />
+      )}
       <Line
         points={points}
         color={style.color}

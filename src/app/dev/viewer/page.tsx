@@ -26,7 +26,7 @@ export default async function ViewerDevPage({
   const { src, climb } = await searchParams;
   const parsed = parseViewerSrc(Array.isArray(src) ? src[0] : src);
   return (
-    <main className="relative h-dvh w-full">
+    <main className="h-view relative w-full">
       {src !== undefined && parsed === null && (
         <p
           role="alert"

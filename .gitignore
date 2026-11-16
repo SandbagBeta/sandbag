@@ -30,3 +30,7 @@ next-env.d.ts
 
 # Claude Code agent worktrees (isolated checkouts, never commit)
 .claude/worktrees/
+
+# playwright
+test-results/
+playwright-report/
