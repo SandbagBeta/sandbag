@@ -6,7 +6,7 @@ Sources are the repo files named in each step; if one of them changes, fix this 
 
 ## 1. Database
 
-- [ ] Link the hosted project and run every migration, **through `20261113000300_scan_scale.sql`** (`supabase db push`, or `supabase migration up --linked`). Check `supabase migration list` shows nothing pending.
+- [ ] Link the hosted project and run every migration (the first hosted attempt on 2026-11-16 found only 2 of 17 applied, and uploads failed with a "couldn't queue your scan" message; preview with `supabase db push --dry-run`), **through `20261113000300_scan_scale.sql`** (`supabase db push`, or `supabase migration up --linked`). Check `supabase migration list` shows nothing pending.
 - [ ] Never run `supabase db reset` against hosted.
 
 ## 2. Storage buckets
@@ -38,6 +38,17 @@ From `.env.example`; none of the secrets may get a `NEXT_PUBLIC_` prefix.
 - [ ] `LOCATION_FUZZ_SECRET` (at least 32 characters; set once and keep it: rotating it moves every fuzzed point, and old and new points together narrow down the real location). Missing or short, fuzzed areas are served as hidden.
 - [ ] Auth providers and redirect URLs configured in the Supabase dashboard (`.env.example`, OAuth section).
 - [ ] The function timeout allows the QC route (`maxDuration` 300 in `src/app/api/qc/run/route.ts`; check the Vercel plan allows it) and enough memory: about 1.1 GB at 5M triangles (comment in the same file).
+
+## Making yourself a maintainer
+
+Reviewing needs `reviewer` or higher (`public.trust_level`: `contributor` default, `reviewer`, `maintainer`). Nothing in the app grants it; the owner does it once in the Supabase SQL editor, after the migrations are applied and after signing in so the profile exists:
+
+```sql
+update public.profiles set trust_level = 'maintainer' where handle = '<your handle>';
+select handle, trust_level from public.profiles;
+```
+
+Self-review is refused, so approving a scan needs a second account.
 
 ## Sign-in (GitHub and Google)
 
