@@ -13,8 +13,8 @@ Grab any app that exports a mesh (Polycam, Scaniverse, RealityScan, Luma…), sc
 1. Pick an issue — `good-first-issue` for newcomers, `agent-ready` means the spec is complete. Comment to claim it.
 2. Read [CLAUDE.md](CLAUDE.md) (yes, even humans — it's the project conventions) and the `.claude/agents/` file for your issue's lane.
 3. Branch `feat/<issue#>-<slug>`, keep the diff focused, include tests.
-4. `pnpm lint && pnpm typecheck && pnpm test && pnpm build` before opening the PR.
-5. Open a PR with `Closes #NN`. CI (`checks`: lint, typecheck, test, build — run `pnpm lint && pnpm typecheck && pnpm test && pnpm build` locally first) must pass, along with CodeQL. A maintainer adds the `claude-review` label to run the reviewer agent, then merges.
+4. `pnpm lint && pnpm typecheck && pnpm test && pnpm build` before opening the PR. You need Node 24 or newer. If you touch a page or flow, also run `pnpm e2e` (setup in [docs/e2e.md](docs/e2e.md)); CI runs it as the `e2e` job.
+5. Open a PR with `Closes #NN`. CI (`checks`: lint, typecheck, test, build; `db`: migrations and pgTAP; `e2e`: Playwright against a local Supabase stack) must pass, along with CodeQL. Run the first four commands locally before pushing. A maintainer adds the `claude-review` label to run the reviewer agent, then merges.
 
 AI agents are first-class contributors here — the repo is built for parallel agent development (see [PLAN.md](PLAN.md)). Agent PRs meet the same bar as human PRs.
 

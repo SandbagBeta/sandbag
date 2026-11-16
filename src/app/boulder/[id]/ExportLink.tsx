@@ -7,7 +7,7 @@ export function ExportLink({ scanId }: { scanId: string }) {
     <a
       href={`/api/scans/${scanId}/export`}
       download={`sandbag-${scanId}.zip`}
-      className="inline-block rounded-md border border-stone-300 px-3 py-1.5 text-sm hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 dark:border-stone-700 dark:hover:bg-stone-800"
+      className="btn btn-ghost px-3 py-1.5"
     >
       Download open data (.zip)
     </a>

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { AreaTree } from "@/components/browse/AreaTree";
 import { BoulderCards } from "@/components/browse/BoulderCards";
+import { EmptyState } from "@/components/site/EmptyState";
 import { loadBrowseIndex } from "@/lib/browse/load";
 import { getPublicSupabaseEnv, isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
@@ -23,22 +24,18 @@ export default async function AreasPage() {
   const empty = index.tree.length === 0 && index.unlinked.length === 0;
 
   return (
-    <main className="mx-auto max-w-3xl space-y-8 px-6 py-12">
+    <main className="page">
       <header className="space-y-2">
-        <Link
-          href="/"
-          className="text-xs text-stone-600 underline hover:no-underline dark:text-stone-400"
-        >
-          SandBag
-        </Link>
-        <h1 className="text-3xl font-bold tracking-tight">Areas</h1>
-        <p className="text-sm text-stone-600 dark:text-stone-400">
+        <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+          Areas
+        </h1>
+        <p className="text-muted text-sm">
           Areas with published 3D scans. Area names come from OpenBeta.
         </p>
-        <p className="text-sm">
+        <p>
           <Link
             href="/search"
-            className="font-medium underline hover:no-underline"
+            className="text-moss inline-flex min-h-11 items-center text-sm font-semibold underline underline-offset-4 hover:no-underline"
           >
             Search by climb name or grade
           </Link>
@@ -46,9 +43,22 @@ export default async function AreasPage() {
       </header>
 
       {empty && (
-        <p className="text-sm text-stone-600 dark:text-stone-400">
-          No boulders have been published yet.
-        </p>
+        <EmptyState
+          title="No boulders yet"
+          actions={
+            <>
+              <Link href="/upload" className="btn btn-primary">
+                Contribute a scan
+              </Link>
+              <Link href="/search" className="btn btn-ghost">
+                Search
+              </Link>
+            </>
+          }
+        >
+          Nothing has been published here so far. Scan a boulder and upload it
+          to put the first one on the map.
+        </EmptyState>
       )}
 
       {index.tree.length > 0 && (
@@ -62,7 +72,10 @@ export default async function AreasPage() {
 
       {index.unlinked.length > 0 && (
         <section aria-labelledby="unlinked-heading" className="space-y-3">
-          <h2 id="unlinked-heading" className="text-lg font-semibold">
+          <h2
+            id="unlinked-heading"
+            className="font-display text-xl font-semibold"
+          >
             Not linked to an area yet
           </h2>
           <BoulderCards

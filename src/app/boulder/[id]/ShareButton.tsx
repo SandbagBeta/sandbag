@@ -32,7 +32,7 @@ export function ShareButton({ title }: { title: string }) {
       <button
         type="button"
         onClick={share}
-        className="rounded-md border border-stone-300 px-3 py-1.5 text-sm hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 dark:border-stone-700 dark:hover:bg-stone-800"
+        className="btn btn-ghost px-3 py-1.5"
       >
         Share link
       </button>

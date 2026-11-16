@@ -70,3 +70,50 @@ test("@smoke areas index loads", async ({ page }) => {
     page.getByRole("heading", { level: 1, name: "Areas" }),
   ).toBeVisible();
 });
+
+// Each route must fit a phone: no horizontal scroll at 360 and 390 px.
+for (const width of [360, 390]) {
+  test(`@smoke browse routes have no horizontal scroll at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 800 });
+    for (const path of ["/areas", "/search", "/search?q=zzz", "/nope-404"]) {
+      await page.goto(path);
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth > window.innerWidth,
+      );
+      expect(overflow, `${path} overflows at ${width}px`).toBe(false);
+    }
+  });
+}
+
+test("@smoke areas empty state invites a contribution", async ({ page }) => {
+  // Skips on a seeded database, where the index is not empty.
+  await page.goto("/areas");
+  const empty = page.getByRole("heading", { name: "No boulders yet" });
+  test.skip(!(await empty.isVisible()), "database has published boulders");
+  await expect(
+    page.getByRole("link", { name: "Contribute a scan" }),
+  ).toHaveAttribute("href", "/upload");
+});
+
+test("@smoke search shows guidance before a query", async ({ page }) => {
+  await page.goto("/search");
+  await expect(
+    page.getByRole("heading", { name: "Find a boulder" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Browse by area" }),
+  ).toHaveAttribute("href", "/areas");
+});
+
+test("@smoke unknown routes show a friendly not-found with a way back", async ({
+  page,
+}) => {
+  const res = await page.goto("/definitely-not-a-page");
+  expect(res?.status()).toBe(404);
+  await expect(
+    page.getByRole("heading", { level: 1, name: /could not find/ }),
+  ).toBeVisible();
+  await expect(page.getByRole("link", { name: "Browse areas" })).toBeVisible();
+});

@@ -1,39 +1,85 @@
 name: Smoke (deployed)
 
-# Runs the secret-free @smoke specs against a successful Vercel deployment.
-# Needs no repository secrets; for previews behind Vercel Deployment Protection,
-# add VERCEL_AUTOMATION_BYPASS_SECRET (Project Settings > Deployment Protection).
+# Runs the secret-free @smoke specs against a deployed site. The target is the
+# repository variable SMOKE_BASE_URL (Settings > Secrets and variables > Actions
+# > Variables), or the `url` input when started by hand. Unset and no input: the
+# job skips. It does not depend on GitHub deployment events, because Vercel does
+# not create GitHub deployments for this repo.
+#
+# Triggers: after CI passes on main (Vercel has normally finished deploying by
+# then), on demand, and once a day as a watchdog.
+# For a site behind Vercel Deployment Protection, add the secret
+# VERCEL_AUTOMATION_BYPASS_SECRET.
 on:
-  deployment_status:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "Base URL to test (defaults to the SMOKE_BASE_URL variable)"
+        required: false
+        type: string
+  schedule:
+    - cron: "17 9 * * *"
 
 permissions:
   contents: read
 
 jobs:
   smoke:
-    if: github.event.deployment_status.state == 'success' && github.event.deployment_status.target_url != ''
+    # For workflow_run, only after a successful CI run.
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      BASE_URL: ${{ github.event.deployment_status.target_url }}
+      BASE_URL: ${{ inputs.url || vars.SMOKE_BASE_URL }}
       VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
     steps:
+      - name: Check there is a target
+        id: target
+        run: |
+          if [ -z "$BASE_URL" ]; then
+            echo "No SMOKE_BASE_URL variable and no url input: skipping."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/checkout@v4
+        if: steps.target.outputs.run == 'true'
         with:
-          ref: ${{ github.event.deployment.sha }}
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - uses: pnpm/action-setup@v4
+        if: steps.target.outputs.run == 'true'
 
       - uses: actions/setup-node@v4
+        if: steps.target.outputs.run == 'true'
         with:
           node-version: 24
           cache: pnpm
 
-      - run: pnpm install --frozen-lockfile
+      - if: steps.target.outputs.run == 'true'
+        run: pnpm install --frozen-lockfile
 
-      - run: pnpm exec playwright install --with-deps chromium
+      - if: steps.target.outputs.run == 'true'
+        run: pnpm exec playwright install --with-deps chromium
+
+      # A deploy that started with the merge can still be building when CI ends:
+      # wait (up to 5 minutes) for the site to answer before testing it.
+      - name: Wait for the site to answer
+        if: steps.target.outputs.run == 'true'
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS -m 10 -o /dev/null "$BASE_URL/api/health"; then exit 0; fi
+            echo "not up yet ($i/30)"; sleep 10
+          done
+          echo "site did not answer at $BASE_URL" >&2; exit 1
 
       - name: Smoke test the deployment
+        if: steps.target.outputs.run == 'true'
         run: pnpm e2e:smoke
 
       - name: Upload report

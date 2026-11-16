@@ -69,7 +69,7 @@ export function ClimbExplorer({
   );
 
   return (
-    <div className="h-view flex flex-col bg-white text-stone-900 md:flex-row dark:bg-stone-950 dark:text-stone-100">
+    <div className="h-view bg-paper text-ink flex flex-col md:flex-row">
       {/* The viewer is client-only (next/dynamic, ssr: false), so this box
           is what the server renders. It reserves the viewer's space up front;
           sizing the lazy component instead let the panel paint at the top and
@@ -96,13 +96,13 @@ export function ClimbExplorer({
         aria-expanded={panelOpen}
         aria-controls={panelId}
         onClick={() => setPanelOpen((open) => !open)}
-        className="border-t border-stone-200 px-4 py-2 text-left text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-sky-600 md:hidden dark:border-stone-800"
+        className="border-line hover:bg-surface min-h-11 border-t px-4 py-2 text-left text-sm font-semibold focus-visible:outline-offset-[-2px] md:hidden"
       >
         {panelOpen ? "Hide details" : "Show details"}
       </button>
       <aside
         id={panelId}
-        className={`flex-1 space-y-4 overflow-y-auto border-stone-200 p-4 md:block md:w-80 md:flex-none md:border-l dark:border-stone-800 ${panelOpen ? "" : "hidden"}`}
+        className={`border-line min-w-0 flex-1 space-y-4 overflow-y-auto p-4 md:block md:w-80 md:flex-none md:border-l ${panelOpen ? "" : "hidden"}`}
       >
         {header}
         <ClimbList

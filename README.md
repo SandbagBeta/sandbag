@@ -22,7 +22,7 @@ Climbers scan boulders with their phones, upload the renders, and annotate them 
 
 ## Quickstart (dev)
 
-Prereqs: Node 24+, pnpm, and, for the database, Docker plus the [Supabase CLI](https://supabase.com/docs/guides/cli). No global CLI? Use `npx supabase` wherever this page says `supabase`.
+Prereqs: **Node 24 or newer** (check with `node -v`; `package.json` sets `engines.node` to `>=24` and Node 22 fails the install check), pnpm, and, for the database, Docker plus the [Supabase CLI](https://supabase.com/docs/guides/cli). No global CLI? Use `npx supabase` wherever this page says `supabase`.
 
 **Just want to see the app?** Skip Supabase. `pnpm install && pnpm dev` is enough for the landing page and `/api/health` (it reports `"supabase": "unconfigured"`); sign-in, upload, review and anything database-backed need the stack below. Measured on a fresh clone (Windows 11, Node 24, pnpm 10, Docker with the Supabase images already cached): `pnpm install` about 38 seconds, `supabase start` about 40 seconds (it applies every migration and creates the buckets), `pnpm seed` 2 seconds, dev server ready in about 5 seconds: roughly a minute and a half of command time, plus the minute it takes to paste four values into `.env.local`. The very first `supabase start` on a machine also downloads the Docker images, which depends on your connection and is not included in those numbers.
 
@@ -72,6 +72,14 @@ New to scanning? Read the [capture guide](docs/capture-guide.md) first. To add a
 `/upload/scans/<id>` (uploader only) is the contributor's scan page: a status timeline from `scan_status_events`, the QC report in plain English (every failed `error` check, then advisory ones, from `qc_report.checks`), and the reviewer's reason for a reject or request-changes. From a failed, rejected or changes-requested scan, "Upload a new version" creates a new `uploaded` scan with `retry_of` set (service role, after an ownership check, since `authenticated` can't write that column) and opens `/upload?retry=<id>`; the old scan keeps its history. Code: `src/lib/scan-report/`, `src/components/scan-status/`.
 
 **File size depends on where Supabase runs.** The local stack (`supabase start`) and self-hosted setups use the 200 MiB limit in `supabase/config.toml`. **The hosted Supabase Free plan caps every file at 50 MB, and that cap can't be raised** ([file limits](https://supabase.com/docs/guides/storage/uploads/file-limits)). On a hosted Free project, uploads over 50 MB pass the page's 200 MB check and are then rejected by Storage, and the page says so. Pro and above allow up to 500 GB per file, configured in the dashboard. This is accepted for development ([ADR 002](docs/decisions/002-mesh-storage.md) D2).
+
+## Troubleshooting
+
+- **`pnpm install` complains about the Node version:** you need Node 24 or newer.
+- **`supabase db push` or `migration list` says "Target: local stack":** newer CLI versions default to local. Add `--remote` to target the linked hosted project, and run `--dry-run` first. Never `db reset` against hosted.
+- **The 3D viewer never appears on `127.0.0.1` in dev:** Next 16 serves no client JS to hosts missing from `allowedDevOrigins`. Use `localhost`, or set `DEV_ALLOWED_ORIGINS=127.0.0.1` (see `.env.example`).
+- **Uploads fail with "couldn't queue your scan" on a hosted project:** the database is missing migrations; compare `supabase migration list --remote` with `supabase/migrations/`.
+- **Running the end-to-end tests:** see [docs/e2e.md](docs/e2e.md).
 
 ## Architecture
 
