@@ -6,6 +6,8 @@ interface Props {
   children: ReactNode;
   /** Called before the subtree is remounted (e.g. to clear a loader cache). */
   onRetry?: () => void;
+  /** Shown instead of the error panel (`null` renders nothing). */
+  fallback?: ReactNode;
 }
 
 interface State {
@@ -28,6 +30,7 @@ export class ViewerErrorBoundary extends Component<Props, State> {
   render() {
     const { error } = this.state;
     if (!error) return this.props.children;
+    if (this.props.fallback !== undefined) return this.props.fallback;
     return (
       <div
         role="alert"

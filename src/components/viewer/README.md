@@ -84,6 +84,21 @@ info panel. The dev page uses it for the demo fixture: `/dev/viewer?climb=<id>`.
 - **Without WebGL:** the climb list and info panel are plain buttons and text
   and work without the canvas.
 
+## Landing hero (issue #152)
+
+`hero/HeroViewer.tsx` is the landing page's decorative scene: the demo fixture
+(`/fixtures/demo-boulder.glb` + `demo-boulder.json`, no Supabase) turning slowly
+with a glowing climb line (`ClimbLine glow`). It uses `BoulderViewer` options
+meant for embeds in scrolling pages: `chrome="bare"` (transparent, no grid or
+loading overlay), `autoRotate` + `paused` (a `FrameDriver` keeps the demand
+loop going only while rotating), `enableZoom={false}` / `enablePan={false}` and
+`canvasClassName="!touch-pan-y"` so wheel and vertical touch drags scroll the
+page, `errorFallback={null}` and `onReady`. `landing/HeroVisual` lazy-loads it
+(`ssr: false`) over a static poster, `public/hero-boulder.png` (regenerate it
+from the live scene if the framing or fixture changes; keep it under 60 KB).
+`landing/heroMode.ts` keeps the poster for no WebGL and reduced motion, and
+pauses off-screen and in hidden tabs.
+
 ## Decoders
 
 - **meshopt** (`EXT_meshopt_compression`, our canonical format): decoder is

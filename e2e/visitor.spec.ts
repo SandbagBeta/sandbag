@@ -40,6 +40,29 @@ test("@smoke no horizontal scroll on the landing page", async ({ page }) => {
   expect(overflow).toBe(false);
 });
 
+test("@smoke landing hero shows the 3D canvas, or the poster without WebGL", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const hero = page.locator('[data-slot="hero-visual"]');
+  await expect(hero).toBeVisible();
+  const box = await hero.boundingBox();
+  expect(box?.height).toBeGreaterThan(100);
+  const webgl = await page.evaluate(
+    () => !!document.createElement("canvas").getContext("webgl2"),
+  );
+  if (webgl) {
+    await expect(hero.locator("canvas")).toBeVisible({ timeout: 30_000 });
+  } else {
+    await expect(hero).toHaveAttribute("data-hero-state", "poster");
+    await expect(hero.locator("img")).toBeVisible();
+  }
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > window.innerWidth,
+  );
+  expect(overflow).toBe(false);
+});
+
 test("@smoke areas index loads", async ({ page }) => {
   const res = await page.goto("/areas");
   expect(res?.status()).toBeLessThan(500);

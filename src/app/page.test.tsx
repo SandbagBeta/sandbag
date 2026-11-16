@@ -27,7 +27,7 @@ describe("Home page", () => {
     expect(screen.queryByText("Featured boulders")).toBeNull();
   });
 
-  it("states the open-data values and leaves the hero slot for 3D", async () => {
+  it("states the open-data values and mounts the hero visual", async () => {
     const { container } = render(await Home());
     expect(
       screen.getByRole("heading", { name: "Open by design" }),

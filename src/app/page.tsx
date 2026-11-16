@@ -1,4 +1,5 @@
 import { StepIcon, type StepIconName } from "@/components/landing/StepIcon";
+import { HeroVisual } from "@/components/landing/HeroVisual";
 import { BoulderCards } from "@/components/browse/BoulderCards";
 import { loadFeatured, type BoulderCard } from "@/lib/browse/load";
 import { getPublicSupabaseEnv, isSupabaseConfigured } from "@/lib/supabase/env";
@@ -54,35 +55,40 @@ export default async function Home() {
           aria-hidden="true"
           className="topo absolute inset-y-0 -right-4 -left-4 -z-10 sm:-right-6 sm:-left-6"
         />
-        <div className="flex max-w-2xl flex-col gap-5">
-          <p className="text-sandstone text-sm font-semibold tracking-widest uppercase">
-            Pre-alpha
-          </p>
-          <h1
-            id="hero-heading"
-            className="font-display text-6xl font-semibold tracking-tight sm:text-7xl"
-          >
-            SandBag
-          </h1>
-          <p className="text-muted text-lg sm:text-xl">
-            Open-source 3D boulder visualizer, built on community contribution.
-          </p>
-          <p className="text-muted text-sm italic">
-            sandbag (v.): to rate a climb easier than it actually is. We keep
-            the receipts.
-          </p>
-          <p className="flex flex-wrap gap-3 pt-2">
-            <a href="/areas" className="btn btn-primary">
-              Browse boulders
-            </a>
-            <a href="/search" className="btn btn-ghost">
-              Search climbs
-            </a>
-          </p>
+        <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)] lg:gap-12">
+          <div className="flex max-w-2xl flex-col gap-5">
+            <p className="text-sandstone text-sm font-semibold tracking-widest uppercase">
+              Pre-alpha
+            </p>
+            <h1
+              id="hero-heading"
+              className="font-display text-6xl font-semibold tracking-tight sm:text-7xl"
+            >
+              SandBag
+            </h1>
+            <p className="text-muted text-lg sm:text-xl">
+              Open-source 3D boulder visualizer, built on community
+              contribution.
+            </p>
+            <p className="text-muted text-sm italic">
+              sandbag (v.): to rate a climb easier than it actually is. We keep
+              the receipts.
+            </p>
+            <p className="sr-only">
+              Beside this text, a 3D scan of the demo boulder turns slowly with
+              the line of the Demo Arete climb glowing over its holds.
+            </p>
+            <p className="flex flex-wrap gap-3 pt-2">
+              <a href="/areas" className="btn btn-primary">
+                Browse boulders
+              </a>
+              <a href="/search" className="btn btn-ghost">
+                Search climbs
+              </a>
+            </p>
+          </div>
+          <HeroVisual />
         </div>
-        {/* Hero slot: #152 mounts the live 3D scene here (aria-hidden and
-            decorative until then). Keep it a sibling of the text column. */}
-        <div data-slot="hero-visual" />
       </section>
 
       <section aria-labelledby="how-heading" className="space-y-6">
@@ -142,7 +148,7 @@ export default async function Home() {
 
       <section
         aria-labelledby="contribute-heading"
-        className="bg-moss text-on-moss flex flex-col gap-4 rounded-2xl p-6 sm:p-10"
+        className="band flex flex-col gap-4 rounded-2xl p-6 sm:p-10"
       >
         <h2
           id="contribute-heading"
@@ -155,10 +161,7 @@ export default async function Home() {
           community annotate it.
         </p>
         <p>
-          <a
-            href="/upload"
-            className="btn bg-on-moss text-moss hover:bg-surface"
-          >
+          <a href="/upload" className="btn btn-band">
             Upload a scan
           </a>
         </p>

@@ -84,12 +84,49 @@ body {
 /* Topographic contour texture: a tiling SVG used as a mask so one asset
    follows the theme colour. Decorative only. */
 .topo {
+  --topo-tile: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320' fill='none' stroke='black' stroke-width='1.2'%3E%3Cpath d='M-10 60c60-40 110 30 170-5s110-30 180 5'/%3E%3Cpath d='M-10 92c60-34 110 28 170-4s110-26 180 4'/%3E%3Cpath d='M-10 124c60-28 110 24 170-3s110-22 180 3'/%3E%3Cpath d='M-10 200c50 30 120-20 180 8s100 24 160-6'/%3E%3Cpath d='M-10 232c50 24 120-16 180 6s100 20 160-5'/%3E%3Cpath d='M-10 264c50 18 120-12 180 4s100 16 160-4'/%3E%3Ccircle cx='160' cy='160' r='14'/%3E%3Ccircle cx='160' cy='160' r='28'/%3E%3C/svg%3E");
+  /* The second layer fades the tiles out toward the bottom edge so the
+     pattern never clips mid-tile. */
+  --topo-fade: linear-gradient(to bottom, #000 45%, transparent 100%);
   background-color: var(--line);
   opacity: 0.55;
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320' fill='none' stroke='black' stroke-width='1.2'%3E%3Cpath d='M-10 60c60-40 110 30 170-5s110-30 180 5'/%3E%3Cpath d='M-10 92c60-34 110 28 170-4s110-26 180 4'/%3E%3Cpath d='M-10 124c60-28 110 24 170-3s110-22 180 3'/%3E%3Cpath d='M-10 200c50 30 120-20 180 8s100 24 160-6'/%3E%3Cpath d='M-10 232c50 24 120-16 180 6s100 20 160-5'/%3E%3Cpath d='M-10 264c50 18 120-12 180 4s100 16 160-4'/%3E%3Ccircle cx='160' cy='160' r='14'/%3E%3Ccircle cx='160' cy='160' r='28'/%3E%3C/svg%3E");
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320' fill='none' stroke='black' stroke-width='1.2'%3E%3Cpath d='M-10 60c60-40 110 30 170-5s110-30 180 5'/%3E%3Cpath d='M-10 92c60-34 110 28 170-4s110-26 180 4'/%3E%3Cpath d='M-10 124c60-28 110 24 170-3s110-22 180 3'/%3E%3Cpath d='M-10 200c50 30 120-20 180 8s100 24 160-6'/%3E%3Cpath d='M-10 232c50 24 120-16 180 6s100 20 160-5'/%3E%3Cpath d='M-10 264c50 18 120-12 180 4s100 16 160-4'/%3E%3Ccircle cx='160' cy='160' r='14'/%3E%3Ccircle cx='160' cy='160' r='28'/%3E%3C/svg%3E");
-  -webkit-mask-size: 320px 320px;
-  mask-size: 320px 320px;
+  -webkit-mask-image: var(--topo-tile), var(--topo-fade);
+  mask-image: var(--topo-tile), var(--topo-fade);
+  -webkit-mask-size:
+    320px 320px,
+    100% 100%;
+  mask-size:
+    320px 320px,
+    100% 100%;
+  -webkit-mask-repeat: repeat, no-repeat;
+  mask-repeat: repeat, no-repeat;
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+}
+
+/* Call-to-action band: moss in light mode, a deeper moss in dark mode so it
+   stays quieter than the hero (text 8.8:1, button 8.8:1 on the band). */
+.band {
+  --band-bg: var(--moss);
+  --band-fg: var(--on-moss);
+  background-color: var(--band-bg);
+  color: var(--band-fg);
+}
+.btn-band {
+  background-color: var(--band-fg);
+  color: var(--band-bg);
+}
+.btn-band:hover {
+  background-color: var(--surface);
+}
+@media (prefers-color-scheme: dark) {
+  .band {
+    --band-bg: #2b4228;
+    --band-fg: #eee7d8;
+  }
+  .btn-band:hover {
+    background-color: #d9cdb6;
+  }
 }
 
 @layer components {

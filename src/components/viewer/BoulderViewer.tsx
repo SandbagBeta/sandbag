@@ -1,8 +1,15 @@
 "use client";
 
-import { Suspense, useCallback, useRef, useState, type ReactNode } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import type { Vec3 } from "@/lib/types";
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Bvh, Grid, OrbitControls } from "@react-three/drei";
 import type { OrbitControlsRef } from "./useFitCamera";
 import { ScanModel } from "./ScanModel";
@@ -40,6 +47,40 @@ export interface BoulderViewerProps {
    * a camera left behind the wall swings round, one already in front stays put.
    */
   facing?: Vec3 | null;
+  /**
+   * Decorative embeds (the landing hero): transparent background, no ground
+   * grid, no loading overlay. Default "full".
+   */
+  chrome?: "full" | "bare";
+  /**
+   * OrbitControls autoRotate speed (2 is one turn per 30 s at 60 fps); 0 or
+   * omitted is off. Because the frameloop is "demand", rotating keeps asking
+   * for frames; `paused` stops that (off-screen, hidden tab).
+   */
+  autoRotate?: number;
+  paused?: boolean;
+  /** Wheel/pinch zoom. Turn off where the canvas sits inside a scrolling page. */
+  enableZoom?: boolean;
+  enablePan?: boolean;
+  /** Replaces the Canvas's default `touch-none`. */
+  canvasClassName?: string;
+  dpr?: [number, number];
+  /** Rendered instead of the error panel when the scan fails to load. */
+  errorFallback?: ReactNode;
+  /** Called once the scan is loaded and the camera is fitted. */
+  onReady?: () => void;
+}
+
+/** Keeps a demand-mode canvas rendering while it is animating. */
+function FrameDriver({ active }: { active: boolean }) {
+  const invalidate = useThree((s) => s.invalidate);
+  useFrame(() => {
+    if (active) invalidate();
+  });
+  useEffect(() => {
+    if (active) invalidate();
+  }, [active, invalidate]);
+  return null;
 }
 
 /**
@@ -55,11 +96,26 @@ export function BoulderViewer({
   bvh = false,
   scale = 1,
   facing = null,
+  chrome = "full",
+  autoRotate = 0,
+  paused = false,
+  enableZoom = true,
+  enablePan = true,
+  canvasClassName = "touch-none",
+  dpr = [1, 2],
+  errorFallback,
+  onReady,
 }: BoulderViewerProps) {
+  const bare = chrome === "bare";
+  const rotating = autoRotate > 0 && !paused;
   const scaleFactor = safeScaleFactor(scale);
   const controlsRef = useRef<OrbitControlsRef | null>(null);
   const [fit, setFit] = useState<CameraFit | null>(null);
   const [attempt, setAttempt] = useState(0);
+
+  useEffect(() => {
+    if (fit) onReady?.();
+  }, [fit, onReady]);
 
   const handleRetry = useCallback(() => {
     clearScanGLTF(src);
@@ -69,15 +125,19 @@ export function BoulderViewer({
 
   return (
     <div
-      className={`relative overflow-hidden bg-stone-100 dark:bg-stone-900 ${className}`}
+      className={`relative overflow-hidden ${bare ? "" : "bg-stone-100 dark:bg-stone-900"} ${className}`}
     >
-      <ViewerErrorBoundary key={attempt} onRetry={handleRetry}>
+      <ViewerErrorBoundary
+        key={attempt}
+        onRetry={handleRetry}
+        fallback={errorFallback}
+      >
         <Canvas
           role="img"
           aria-label={label}
-          className="touch-none"
+          className={canvasClassName}
           frameloop="demand"
-          dpr={[1, 2]}
+          dpr={dpr}
           shadows={false}
           gl={{ antialias: true, powerPreference: "high-performance" }}
           camera={{ fov: 50, near: 0.05, far: 200, position: [3, 2, 4] }}
@@ -118,7 +178,7 @@ export function BoulderViewer({
               </ScanScaleContext.Provider>
             </group>
           </Suspense>
-          {fit && (
+          {fit && !bare && (
             <Grid
               position={[fit.target.x, fit.groundY - 0.002, fit.target.z]}
               args={[fit.radius * 8, fit.radius * 8]}
@@ -130,20 +190,23 @@ export function BoulderViewer({
               fadeStrength={1.5}
             />
           )}
+          <FrameDriver active={rotating} />
           <OrbitControls
             ref={controlsRef}
             makeDefault
             enableDamping
             dampingFactor={0.08}
-            enablePan
-            enableZoom
+            enablePan={enablePan}
+            enableZoom={enableZoom}
+            autoRotate={rotating}
+            autoRotateSpeed={autoRotate}
             rotateSpeed={0.8}
             zoomSpeed={0.8}
             minPolarAngle={0.05}
             maxPolarAngle={Math.PI / 2 - 0.02}
           />
         </Canvas>
-        {!fit && <LoadingOverlay />}
+        {!fit && !bare && <LoadingOverlay />}
       </ViewerErrorBoundary>
       {children && <div className="sr-only">{children}</div>}
     </div>
