@@ -19,7 +19,10 @@ test("@smoke landing page renders the pitch and primary links", async ({
 test("@smoke health endpoint is up", async ({ request }) => {
   const res = await request.get("/api/health");
   expect(res.ok()).toBe(true);
-  expect((await res.json()).ok).toBe(true);
+  const body = await res.json();
+  expect(body.ok).toBe(true);
+  // A deployed site with no Supabase env vars still serves pages; catch that.
+  if (process.env.BASE_URL) expect(body.supabase).toBe("configured");
 });
 
 test("@smoke signed-out users are sent to sign-in from gated pages", async ({
