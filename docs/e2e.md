@@ -31,3 +31,12 @@ Sign-in is GitHub/Google OAuth only, which a test can't drive. `e2e/support/auth
 - Tag specs that are safe on a deployed site `@smoke`.
 - Anything that can show a location must assert no coordinates leak (`e2e/privacy.spec.ts`).
 - Planned next: upload -> QC (call `POST /api/qc/run` with `QC_RUN_SECRET`) -> review -> publish -> annotate -> grade vote -> export.
+
+## In CI
+
+- `e2e` job in `.github/workflows/ci.yml`: starts a local Supabase stack, seeds, builds, serves the production bundle (`E2E_SERVER=start`) and runs the full suite. Failure uploads the Playwright report and traces. It is not a required check yet (#150).
+- `.github/workflows/smoke.yml`: on a successful deployment, runs `@smoke` against the deployment URL. If previews use Vercel Deployment Protection, add the repository secret `VERCEL_AUTOMATION_BYPASS_SECRET` (Vercel: Project Settings > Deployment Protection > Protection Bypass for Automation).
+
+## Troubleshooting
+
+- **Viewer spec times out, page text looks fine:** Next 16 serves no client JS to hosts missing from `allowedDevOrigins`. The config passes `DEV_ALLOWED_ORIGINS` for the test host; if you change `BASE_URL` for a local dev server, the same applies.

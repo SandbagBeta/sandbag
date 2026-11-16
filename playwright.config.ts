@@ -16,6 +16,13 @@ export default defineConfig({
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
   use: {
     baseURL,
+    // Vercel Deployment Protection: lets the smoke job through on protected previews.
+    extraHTTPHeaders: process.env.VERCEL_AUTOMATION_BYPASS_SECRET
+      ? {
+          "x-vercel-protection-bypass":
+            process.env.VERCEL_AUTOMATION_BYPASS_SECRET,
+        }
+      : undefined,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
@@ -43,7 +50,8 @@ export default defineConfig({
   webServer: hosted
     ? undefined
     : {
-        command: "pnpm dev",
+        // CI builds first and serves the production bundle (E2E_SERVER=start).
+        command: process.env.E2E_SERVER === "start" ? "pnpm start" : "pnpm dev",
         // Next 16 serves no client JS to hosts missing from allowedDevOrigins;
         // the test URL is 127.0.0.1, so the 3D viewer would never hydrate.
         env: { DEV_ALLOWED_ORIGINS: new URL(baseURL).hostname },
