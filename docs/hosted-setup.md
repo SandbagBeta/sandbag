@@ -70,8 +70,8 @@ Only after everything above, with the owner watching:
 
 - [x] `/api/health` no longer reports `"supabase": "unconfigured"`.
 - [x] Sign in, upload a small scan, and watch it reach `pending_review` within a few minutes (this proves steps 2 and 3).
-- [ ] The scan has a thumbnail (proves `image/webp`). Reported working on 2026-11-16 but not yet independently confirmed.
+- [x] The scan has a thumbnail (proves `image/webp`). Confirmed by the owner on 2026-11-16.
 - [x] A reviewer approves it (not the uploader; self-review is refused), and the published page loads the mesh.
 - [x] Annotate and save a climb.
 
-Result recorded in PRD §13 (2026-11-16: loop verified; thumbnail to confirm). Record any later change in PRD §13: "hosted" is not verified until this passes.
+Result recorded in PRD §13 (2026-11-16: loop verified, thumbnail confirmed). Record any later change in PRD §13: "hosted" is not verified until this passes.
