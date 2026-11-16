@@ -71,8 +71,15 @@ describe("FaqPage", () => {
 
   it("turns URLs in answers into links", () => {
     render(<FaqPage />);
-    expect(
-      screen.getAllByRole("link", { name: /github\.com\/sandbagbeta/ }).length,
-    ).toBeGreaterThan(0);
+    const links = screen.getAllByRole("link", {
+      name: /^github\.com\/sandbagbeta\//,
+    });
+    expect(links.length).toBeGreaterThan(0);
+    // The target is checked on the real href, anchored at the start.
+    for (const l of links) {
+      expect(l.getAttribute("href")).toMatch(
+        /^https:\/\/github\.com\/sandbagbeta\//,
+      );
+    }
   });
 });
