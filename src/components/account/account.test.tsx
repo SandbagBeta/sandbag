@@ -55,6 +55,49 @@ describe("UploadsSection", () => {
     );
     expect(document.querySelector('[data-thumb="placeholder"]')).not.toBeNull();
   });
+
+  it("says changes were requested, not that it is waiting, when a reviewer asked for changes", () => {
+    render(
+      <UploadsSection
+        thumbs={{}}
+        uploads={[
+          {
+            id: "s2",
+            status: "pending_review",
+            createdAt: "2026-05-02T00:00:00Z",
+            steps: trackerSteps("pending_review", {
+              verdict: "request_changes",
+            }),
+            reason: "Retake the top half.",
+            thumb: null,
+          },
+        ]}
+      />,
+    );
+    expect(screen.getAllByText("Changes requested").length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Waiting for a reviewer/)).toBeNull();
+    expect(screen.queryByText(/will look at it soon/)).toBeNull();
+    expect(screen.getByText(/asked for changes/)).toBeInTheDocument();
+  });
+
+  it("still says waiting for a reviewer when no changes were requested", () => {
+    render(
+      <UploadsSection
+        thumbs={{}}
+        uploads={[
+          {
+            id: "s3",
+            status: "pending_review",
+            createdAt: "2026-05-02T00:00:00Z",
+            steps: trackerSteps("pending_review"),
+            reason: null,
+            thumb: null,
+          },
+        ]}
+      />,
+    );
+    expect(screen.getByText(/Waiting for a reviewer/)).toBeInTheDocument();
+  });
 });
 
 describe("ClimbsSection", () => {

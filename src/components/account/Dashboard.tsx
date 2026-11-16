@@ -46,7 +46,9 @@ export function UploadsSection({
               </div>
               <div className="min-w-0 flex-1 space-y-2">
                 <p className="font-semibold">
-                  {STATUS_LABEL[u.status]}{" "}
+                  {changesRequested(u)
+                    ? "Changes requested"
+                    : STATUS_LABEL[u.status]}{" "}
                   <time
                     dateTime={u.createdAt}
                     className="text-muted text-xs font-normal"
@@ -55,7 +57,11 @@ export function UploadsSection({
                   </time>
                 </p>
                 <StepTracker steps={u.steps} />
-                <p className="text-muted text-sm">{STATUS_HELP[u.status]}</p>
+                <p className="text-muted text-sm">
+                  {changesRequested(u)
+                    ? "A reviewer asked for changes. Their reason is below: fix the scan and upload a new version."
+                    : STATUS_HELP[u.status]}
+                </p>
                 {u.reason && (
                   <p className="text-sm whitespace-pre-wrap">
                     <strong>Reason:</strong> {u.reason}
@@ -70,6 +76,17 @@ export function UploadsSection({
         </ul>
       )}
     </section>
+  );
+}
+
+/**
+ * "Changes requested" is a review verdict, not a status: the scan is still
+ * pending_review underneath. The tracker marks it as a problem step, so the
+ * headline and help must say so too instead of "waiting for a reviewer".
+ */
+function changesRequested(u: { status: string; steps: { state: string }[] }) {
+  return (
+    u.status === "pending_review" && u.steps.some((s) => s.state === "problem")
   );
 }
 
