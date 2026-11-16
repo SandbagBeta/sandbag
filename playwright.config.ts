@@ -24,14 +24,18 @@ export default defineConfig({
       name: "chromium",
       use: {
         ...devices["Desktop Chrome"],
-        // Software WebGL so the 3D viewer renders without a GPU.
-        launchOptions: {
-          args: [
-            "--use-gl=angle",
-            "--use-angle=swiftshader",
-            "--ignore-gpu-blocklist",
-          ],
-        },
+        // Software WebGL for GPU-less Linux (CI, containers). Windows and macOS
+        // have a working default, and forcing swiftshader there can break it.
+        launchOptions:
+          process.platform === "linux"
+            ? {
+                args: [
+                  "--use-gl=angle",
+                  "--use-angle=swiftshader",
+                  "--ignore-gpu-blocklist",
+                ],
+              }
+            : {},
       },
     },
     { name: "mobile", use: { ...devices["Pixel 7"] }, grep: /@smoke/ },

@@ -12,7 +12,16 @@ test("seeded boulder page renders a WebGL canvas and its climbs", async ({
   const link = page.locator('a[href^="/boulder/"]').first();
   await expect(link).toBeVisible();
   await link.click();
-  await expect(page.locator("canvas").first()).toBeVisible({ timeout: 30_000 });
+  const canvas = page.locator("canvas").first();
+  try {
+    await expect(canvas).toBeVisible({ timeout: 30_000 });
+  } catch (e) {
+    // Say what the page showed (e.g. the viewer's error panel) instead of a bare timeout.
+    const text = (await page.locator("main").innerText()).slice(0, 600);
+    throw new Error(`no canvas on ${page.url()}. Page said: ${text}`, {
+      cause: e,
+    });
+  }
   const gl = await page.evaluate(() => {
     const c = document.querySelector("canvas");
     return !!(c && (c.getContext("webgl2") || c.getContext("webgl")));
