@@ -1,14 +1,116 @@
 @import "tailwindcss";
 
-@theme {
-  --color-sandstone: #c9a27e;
+/*
+ * Design tokens. Semantic colours are CSS variables that flip in dark mode;
+ * @theme inline maps them to Tailwind utilities (bg-paper, text-ink, ...).
+ * Contrast (WCAG AA, checked): ink/paper 14:1, muted/paper 6.5:1,
+ * moss/paper 7:1, sandstone/paper 5.1:1, and the dark equivalents >= 7:1.
+ */
+:root {
+  color-scheme: light dark;
+  --header-h: 3.5rem;
+  --paper: #f5efe3;
+  --surface: #fbf7ee;
+  --ink: #25211a;
+  --muted: #5b5244;
+  --line: #d9cdb6;
+  --moss: #3d5a38;
+  --moss-strong: #2c4429;
+  --on-moss: #f5efe3;
+  --sandstone: #8a5628;
+  --focus: #2c4429;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #14130f;
+    --surface: #1e1c16;
+    --ink: #eee7d8;
+    --muted: #b5aa95;
+    --line: #3a362b;
+    --moss: #a3c493;
+    --moss-strong: #bcd8ad;
+    --on-moss: #14130f;
+    --sandstone: #dba972;
+    --focus: #dba972;
+  }
+}
+
+@theme inline {
+  --font-sans: var(--font-hanken), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-moss: var(--moss);
+  --color-moss-strong: var(--moss-strong);
+  --color-on-moss: var(--on-moss);
+  --color-sandstone: var(--sandstone);
   --color-granite: #3b3f46;
 }
 
-:root {
-  color-scheme: light dark;
+/* Warm the neutral scale used by existing pages so the whole site shifts
+   from cool gray to sandstone/granite without touching every file. */
+@theme {
+  --color-stone-50: #f8f3e9;
+  --color-stone-100: #efe8d8;
+  --color-stone-200: #ded3bd;
+  --color-stone-300: #c8baa0;
+  --color-stone-400: #a39683;
+  --color-stone-500: #6f6455;
+  --color-stone-600: #5b5244;
+  --color-stone-700: #443e33;
+  --color-stone-800: #2e2a22;
+  --color-stone-900: #1e1c16;
+  --color-stone-950: #14130f;
 }
 
 body {
-  @apply bg-stone-50 text-stone-900 antialiased dark:bg-stone-950 dark:text-stone-100;
+  @apply bg-paper text-ink font-sans antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Full-height viewer pages sit below the shared header. */
+@utility h-view {
+  height: calc(100dvh - var(--header-h));
+}
+
+/* Topographic contour texture: a tiling SVG used as a mask so one asset
+   follows the theme colour. Decorative only. */
+.topo {
+  background-color: var(--line);
+  opacity: 0.55;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320' fill='none' stroke='black' stroke-width='1.2'%3E%3Cpath d='M-10 60c60-40 110 30 170-5s110-30 180 5'/%3E%3Cpath d='M-10 92c60-34 110 28 170-4s110-26 180 4'/%3E%3Cpath d='M-10 124c60-28 110 24 170-3s110-22 180 3'/%3E%3Cpath d='M-10 200c50 30 120-20 180 8s100 24 160-6'/%3E%3Cpath d='M-10 232c50 24 120-16 180 6s100 20 160-5'/%3E%3Cpath d='M-10 264c50 18 120-12 180 4s100 16 160-4'/%3E%3Ccircle cx='160' cy='160' r='14'/%3E%3Ccircle cx='160' cy='160' r='28'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320' fill='none' stroke='black' stroke-width='1.2'%3E%3Cpath d='M-10 60c60-40 110 30 170-5s110-30 180 5'/%3E%3Cpath d='M-10 92c60-34 110 28 170-4s110-26 180 4'/%3E%3Cpath d='M-10 124c60-28 110 24 170-3s110-22 180 3'/%3E%3Cpath d='M-10 200c50 30 120-20 180 8s100 24 160-6'/%3E%3Cpath d='M-10 232c50 24 120-16 180 6s100 20 160-5'/%3E%3Cpath d='M-10 264c50 18 120-12 180 4s100 16 160-4'/%3E%3Ccircle cx='160' cy='160' r='14'/%3E%3Ccircle cx='160' cy='160' r='28'/%3E%3C/svg%3E");
+  -webkit-mask-size: 320px 320px;
+  mask-size: 320px 320px;
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center rounded-md px-5 py-2.5 text-sm font-semibold transition-colors duration-150;
+  }
+  .btn-primary {
+    @apply bg-moss text-on-moss hover:bg-moss-strong;
+  }
+  .btn-ghost {
+    @apply border-line text-ink hover:bg-surface border;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

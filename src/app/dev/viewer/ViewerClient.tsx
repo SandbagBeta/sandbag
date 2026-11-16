@@ -31,7 +31,7 @@ export function ViewerClient({ src, climb }: { src: string; climb?: string }) {
     );
   }
   return (
-    <BoulderViewer src={src} label="3D scan preview" className="h-dvh w-full">
+    <BoulderViewer src={src} label="3D scan preview" className="h-view w-full">
       Development preview of a boulder scan loaded from {src}. {HELP}
     </BoulderViewer>
   );

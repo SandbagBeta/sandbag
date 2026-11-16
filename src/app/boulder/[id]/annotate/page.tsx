@@ -76,7 +76,7 @@ export default async function AnnotatePage({
   }
 
   return (
-    <main className="relative h-dvh w-full">
+    <main className="h-view relative w-full">
       <AnnotateEditor
         src={src}
         label={edit ? "3D scan: editing your climb" : "3D scan to annotate"}
