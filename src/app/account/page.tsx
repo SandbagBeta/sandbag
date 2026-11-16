@@ -8,9 +8,34 @@ import { ensureProfile } from "@/lib/auth/profile";
 import { countUnread } from "@/lib/review/notifications";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
+import { AutoRefresh } from "@/components/account/AutoRefresh";
+import {
+  ClimbsSection,
+  UploadsSection,
+  VotesSection,
+} from "@/components/account/Dashboard";
+import {
+  loadMyClimbs,
+  loadMyUploads,
+  loadMyVotes,
+} from "@/lib/profile/dashboard";
+import { resolveThumbs } from "@/lib/profile/thumbs";
+import { isInFlight } from "@/lib/scan-report/tracker";
+import { storageFor } from "@/lib/storage";
+import { createServiceClient } from "@/lib/supabase/service";
+import { getServiceRoleKey } from "@/lib/supabase/env";
 import { HandleForm } from "./HandleForm";
 
 export const metadata: Metadata = { title: "Account — SandBag" };
+
+function serviceStorage() {
+  try {
+    getServiceRoleKey();
+    return storageFor(createServiceClient());
+  } catch {
+    return null;
+  }
+}
 
 export default async function AccountPage({
   searchParams,
@@ -31,10 +56,25 @@ export default async function AccountPage({
   const profile = await ensureProfile(supabase, data.user);
   const unread = await countUnread(supabase);
   const pending = await loadMyPendingClimbs(supabase, data.user.id);
+  const [uploads, climbs, votes] = await Promise.all([
+    loadMyUploads(supabase, data.user.id),
+    loadMyClimbs(supabase, data.user.id),
+    loadMyVotes(supabase, data.user.id),
+  ]);
+  // Thumbnails of unpublished scans sit in the private bucket, which the user's
+  // own session can't sign. Only the user's own scans (loaded above under RLS)
+  // are ever asked about; without a service key they get the placeholder.
+  const thumbs = await resolveThumbs(
+    uploads,
+    storageFor(supabase),
+    serviceStorage(),
+  );
 
   return (
-    <main className="mx-auto flex max-w-lg flex-col gap-8 px-6 py-20">
-      <h1 className="text-3xl font-bold tracking-tight">Your account</h1>
+    <main className="page">
+      <h1 className="font-display text-3xl font-semibold tracking-tight">
+        Your account
+      </h1>
       {profile.status === "error" ? (
         <p role="alert" className="text-red-700 dark:text-red-400">
           We could not set up your profile. Reload the page to try again.
@@ -50,6 +90,20 @@ export default async function AccountPage({
           <HandleForm handle={profile.handle} />
         </section>
       )}
+      {profile.status !== "error" && (
+        <p>
+          <Link
+            href={`/u/${profile.handle}`}
+            className="text-moss font-semibold underline underline-offset-4 hover:no-underline"
+          >
+            View public profile
+          </Link>
+        </p>
+      )}
+      <AutoRefresh active={uploads.some((u) => isInFlight(u.status))} />
+      <UploadsSection uploads={uploads} thumbs={thumbs} />
+      <ClimbsSection climbs={climbs} />
+      <VotesSection votes={votes} />
       {pending.length > 0 && (
         <section
           aria-labelledby="pending-heading"

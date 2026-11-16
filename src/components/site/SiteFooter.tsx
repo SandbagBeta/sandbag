@@ -15,6 +15,14 @@ export function SiteFooter() {
               GitHub
             </a>
           </li>
+          <li>
+            <a
+              className="hover:text-ink inline-flex min-h-11 items-center underline-offset-4 hover:underline"
+              href="/faq"
+            >
+              FAQ
+            </a>
+          </li>
           <li>Code: AGPL-3.0</li>
           <li>Data: CC BY-SA 4.0</li>
           <li>

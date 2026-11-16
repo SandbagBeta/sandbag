@@ -59,6 +59,13 @@ export interface BoulderViewerProps {
    */
   autoRotate?: number;
   paused?: boolean;
+  /**
+   * Keep requesting frames while true (for animations a child drives, such as
+   * the hero's sweep). Honours `paused`. Default false.
+   */
+  animating?: boolean;
+  /** Drag-to-orbit. Turn off for scenes whose camera is driven by a child. */
+  enableRotate?: boolean;
   /** Wheel/pinch zoom. Turn off where the canvas sits inside a scrolling page. */
   enableZoom?: boolean;
   enablePan?: boolean;
@@ -99,6 +106,8 @@ export function BoulderViewer({
   chrome = "full",
   autoRotate = 0,
   paused = false,
+  animating = false,
+  enableRotate = true,
   enableZoom = true,
   enablePan = true,
   canvasClassName = "touch-none",
@@ -108,6 +117,7 @@ export function BoulderViewer({
 }: BoulderViewerProps) {
   const bare = chrome === "bare";
   const rotating = autoRotate > 0 && !paused;
+  const drawing = rotating || (animating && !paused);
   const scaleFactor = safeScaleFactor(scale);
   const controlsRef = useRef<OrbitControlsRef | null>(null);
   const [fit, setFit] = useState<CameraFit | null>(null);
@@ -190,13 +200,14 @@ export function BoulderViewer({
               fadeStrength={1.5}
             />
           )}
-          <FrameDriver active={rotating} />
+          <FrameDriver active={drawing} />
           <OrbitControls
             ref={controlsRef}
             makeDefault
             enableDamping
             dampingFactor={0.08}
             enablePan={enablePan}
+            enableRotate={enableRotate}
             enableZoom={enableZoom}
             autoRotate={rotating}
             autoRotateSpeed={autoRotate}

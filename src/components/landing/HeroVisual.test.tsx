@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { HeroVisual } from "./HeroVisual";
 
@@ -7,7 +7,21 @@ const mode = vi.hoisted(() => ({
 }));
 vi.mock("./heroMode", () => ({ useHeroMode: () => mode.value }));
 vi.mock("@/components/viewer/hero/HeroViewer", () => ({
-  default: () => <div data-testid="hero-canvas" />,
+  default: ({
+    onReady,
+    onActiveClimb,
+  }: {
+    onReady?: () => void;
+    onActiveClimb?: (c: { name: string; grade: string | null }) => void;
+  }) => (
+    <button
+      data-testid="hero-canvas"
+      onClick={() => {
+        onReady?.();
+        onActiveClimb?.({ name: "Demo Arete", grade: "V2" });
+      }}
+    />
+  ),
 }));
 
 describe("HeroVisual", () => {
@@ -33,5 +47,31 @@ describe("HeroVisual", () => {
         .getByRole("img", { name: /3D scan/ })
         .getAttribute("data-hero-state"),
     ).toBe("loading");
+  });
+
+  it("hides the poster once the canvas is ready, so no second rock shows through", async () => {
+    mode.value = { checked: true, live: true, paused: false };
+    const { container } = render(<HeroVisual />);
+    const poster = container.querySelector("img") as HTMLImageElement;
+    expect(poster.className).toContain("opacity-100");
+    fireEvent.click(await screen.findByTestId("hero-canvas"));
+    expect(poster.className).toContain("opacity-0");
+    expect(poster.className).not.toContain("opacity-100");
+  });
+
+  it("keeps the poster visible when the canvas is not live", () => {
+    const { container } = render(<HeroVisual />);
+    const poster = container.querySelector("img") as HTMLImageElement;
+    expect(poster.className).toContain("opacity-100");
+  });
+
+  it("captions the climb that is facing the camera", async () => {
+    mode.value = { checked: true, live: true, paused: false };
+    render(<HeroVisual />);
+    expect(screen.queryByTestId("hero-caption")).toBeNull();
+    fireEvent.click(await screen.findByTestId("hero-canvas"));
+    expect(screen.getByTestId("hero-caption").textContent).toBe(
+      "Demo Arete · V2",
+    );
   });
 });
