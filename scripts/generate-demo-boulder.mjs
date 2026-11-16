@@ -109,7 +109,10 @@ export function buildFixtureData(geometry, contentHash) {
       created_by: UPLOADER_ID,
     });
     const linePoints = [];
-    c.holds.forEach(([type, target], seq) => {
+    // Foot holds are optional, unordered points (holds_foot_unordered, #123):
+    // no seq_order, and the other holds are numbered 0..n-1 without them.
+    let seq = 0;
+    c.holds.forEach(([type, target]) => {
       const anchor = snap(target);
       holds.push({
         id: id("0d", ++holdN),
@@ -117,7 +120,7 @@ export function buildFixtureData(geometry, contentHash) {
         scan_content_hash: contentHash,
         ...anchor,
         type,
-        seq_order: seq,
+        seq_order: type === "foot" ? null : seq++,
       });
       if (type !== "foot") linePoints.push(anchor.position);
     });

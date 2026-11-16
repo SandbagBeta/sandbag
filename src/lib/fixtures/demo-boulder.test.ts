@@ -95,7 +95,13 @@ describe("fixture holds and paths", () => {
       const holds = holdsForClimb(c.id);
       const types = new Set<HoldType>(holds.map((h) => h.type));
       expect([...types].sort()).toEqual(["finish", "foot", "hand", "start"]);
-      expect(holds.map((h) => h.seq_order)).toEqual(holds.map((_, i) => i));
+      // Feet are unordered (no seq_order); the rest are numbered 0..n-1.
+      expect(
+        holds.filter((h) => h.type === "foot").map((h) => h.seq_order),
+      ).toEqual(holds.filter((h) => h.type === "foot").map(() => null));
+      expect(
+        holds.filter((h) => h.type !== "foot").map((h) => h.seq_order),
+      ).toEqual(holds.filter((h) => h.type !== "foot").map((_, i) => i));
       const kinds = pathsForClimb(c.id).map((p) => p.kind);
       expect(kinds.sort()).toEqual<PathKind[]>(["downclimb", "line", "topout"]);
     }
